@@ -1,0 +1,2137 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GeoAgreste — Plataforma de Voo e Mapeamento Comunitário (v12)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- ShpJS para leitura direta de Shapefile (.zip) -->
+<script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
+
+<style>
+:root{--bg:#f4f7fa;--card:#fff;--line:#dce4ec;--txt:#17212b;--muted:#6b7885;--blue:#1769e0;--blue2:#0d56bf;--green:#188754;--red:#dc2626;--soft:#eef5ff;--shadow:0 10px 32px rgba(30,55,80,.09)}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--txt)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+.btn{border:1px solid var(--line);background:#fff;color:var(--txt);border-radius:9px;padding:10px 13px;font-size:12px;font-weight:800;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+.btn:hover{background:#f8fafc}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.primary:hover{background:var(--blue2)}
+.btn.green{background:var(--green);border-color:var(--green);color:#fff}
+.btn.green:hover{background:#126b42}
+.btn.danger{color:#b42318;border-color:#fecdca}
+.btn.danger:hover{background:#fef3f2}
+.btn.small{padding:8px 10px;font-size:11px}
+
+/* Auth */
+.auth{height:100vh;display:grid;grid-template-columns:1fr 440px}
+.authHero{display:flex;flex-direction:column;justify-content:center;padding:60px;background:linear-gradient(135deg,#f0f5ff,#e3effe);overflow-y:auto}
+.logo{display:flex;gap:12px;align-items:center}
+.logoIcon{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#1769e0,#188754);color:#fff;display:grid;place-items:center;font-size:20px}
+.heroTitle{font-size:36px;font-weight:950;line-height:1.1;max-width:700px;margin-top:20px;color:#0d233a}
+.heroText{color:#334155;max-width:650px;line-height:1.6;margin-top:12px;font-size:13px}
+.features{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:650px;margin-top:22px}
+.feature{background:#fff;border:1px solid #bfdbfe;border-radius:10px;padding:12px;font-size:11px;font-weight:700;color:#1e3a8a;box-shadow:0 2px 6px rgba(23,105,224,.05)}
+.feature i{color:var(--blue);margin-right:7px}
+.authPanel{background:#fff;border-left:1px solid var(--line);padding:36px;display:flex;justify-content:center;flex-direction:column;overflow-y:auto}
+.authPanel h2{margin:0;font-size:24px}
+.authPanel p{font-size:11px;color:var(--muted);margin:6px 0 18px}
+.tabs{display:flex;border-bottom:1px solid var(--line);margin-bottom:18px}
+.tab{flex:1;border:0;border-bottom:2px solid transparent;background:none;padding:10px;color:var(--muted);font-size:11px;font-weight:900}
+.tab.active{color:var(--blue);border-color:var(--blue)}
+.field{margin-bottom:12px}
+.field label{display:flex;justify-content:space-between;font-size:11px;font-weight:800;margin-bottom:5px;color:#334155}
+.field input,.field select,.field textarea{width:100%;height:38px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:0 11px;color:var(--txt);outline:0;transition:border-color .15s}
+.field textarea{height:90px;padding:10px;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#8fb3e8;box-shadow:0 0 0 3px #eaf2ff}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.hint{font-size:10px;color:var(--muted);line-height:1.5;margin-top:6px}
+.error{color:#b42318;font-size:10px;margin-top:6px}
+
+/* Google Auth Button */
+.btn-google{width:100%;height:40px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;gap:10px;color:#334155;transition:all .15s;margin-top:10px}
+.btn-google:hover{background:#f8fafc;border-color:#94a3b8}
+
+/* App Header & Structure */
+.app{height:100vh;display:flex;flex-direction:column}
+.top{height:66px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.brand{display:flex;gap:11px;align-items:center}
+.brandIcon{width:37px;height:37px;border-radius:10px;background:linear-gradient(135deg,#1769e0,#188754);color:#fff;display:grid;place-items:center}
+.brandName{font-size:14px;font-weight:950}
+.brandSub{font-size:10px;color:var(--muted)}
+.topRight{display:flex;align-items:center;gap:10px}
+.roleBadge{font-size:10px;font-weight:900;padding:4px 8px;border-radius:999px;text-transform:uppercase}
+.roleBadge.admin{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+.roleBadge.user{background:#eef5ff;color:#1769e0;border:1px solid #bfdbfe}
+.avatar{width:30px;height:30px;border-radius:50%;background:#e8f0fe;color:var(--blue);display:grid;place-items:center;font-size:11px;font-weight:900}
+.user{font-size:11px;color:var(--muted)}
+.screen{height:calc(100vh - 66px);overflow:auto}
+.wrap{max-width:1400px;margin:auto;padding:30px 28px}
+.head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:23px}
+.eyebrow{font-size:10px;color:var(--blue);font-weight:950;text-transform:uppercase;letter-spacing:1px}
+.title{font-size:29px;font-weight:950;margin-top:4px}
+.sub{font-size:12px;color:var(--muted);margin-top:5px}
+
+/* Summary Cards */
+.summaryGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:22px}
+.summary{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow)}
+.summary .k{font-size:9px;color:var(--muted);font-weight:900;text-transform:uppercase}
+.summary .v{font-size:25px;font-weight:950;margin-top:4px}
+.summary .s{font-size:9px;color:var(--muted)}
+
+.panel{background:#fff;border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow)}
+.panelHead{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:center}
+.panelTitle{font-size:14px;font-weight:900}
+.panelSub{font-size:10px;color:var(--muted);margin-top:3px}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.filter{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 10px;font-size:10px;color:var(--muted);font-weight:800}
+.filter.active{background:var(--soft);border-color:#b9d0f5;color:var(--blue)}
+.projects{padding:18px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.project{border:1px solid var(--line);border-radius:11px;padding:15px;background:#fff;transition:all .15s;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between}
+.project:hover{box-shadow:0 8px 25px rgba(30,55,80,.1);border-color:#a5c2f0}
+.project h3{font-size:14px;margin:0;color:var(--txt)}
+.desc{font-size:10px;color:var(--muted);margin-top:5px;min-height:28px}
+.miniMapBox{height:130px;width:100%;border-radius:8px;border:1px solid var(--line);margin-top:10px;overflow:hidden;position:relative;z-index:1;background:#e5e9ec}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.pill{font-size:9px;padding:5px 7px;border-radius:999px;border:1px solid var(--line);background:#f8fafc;color:var(--muted);font-weight:700}
+.pill.green{background:#eaf7f0;color:var(--green);border-color:#c1e4cf}
+.pill.blue{background:#eef5ff;color:var(--blue);border-color:#bfdbfe}
+.pill.orange{background:#fff7ed;color:#c2410c;border-color:#fed7aa}
+.actions{display:flex;gap:6px;margin-top:13px}
+.actions .btn{flex:1;justify-content:center}
+.empty{text-align:center;padding:55px;color:var(--muted);grid-column:1/-1}
+.empty i{font-size:35px;color:#b8c4ce;margin-bottom:10px}
+.empty h3{font-size:15px;color:var(--txt);margin:0 0 4px}
+
+/* Wizard */
+.wizard{height:100vh;display:flex;flex-direction:column;background:var(--bg)}
+.wHead{background:#fff;border-bottom:1px solid var(--line);padding:17px 28px}
+.wTop{display:flex;justify-content:space-between;align-items:center}
+.wTitle{font-size:15px;font-weight:950}
+.wSub{font-size:10px;color:var(--muted);margin-top:3px}
+.steps{display:flex;max-width:1000px;margin-top:16px;overflow-x:auto}
+.step{flex:1;text-align:center;color:#8c98a3;font-size:9px;font-weight:900;position:relative;min-width:90px}
+.step:after{content:"";height:2px;background:#e2e8ee;position:absolute;left:50%;right:-50%;top:13px;z-index:0}
+.step:last-child:after{display:none}
+.dot{width:27px;height:27px;border-radius:50%;border:2px solid #d9e1e8;background:#fff;display:grid;place-items:center;margin:auto;position:relative;z-index:1}
+.step.active{color:var(--blue)}
+.step.active .dot{border-color:var(--blue);color:var(--blue)}
+.step.done .dot{background:var(--blue);border-color:var(--blue);color:#fff}
+.step.done:after{background:#9bbbea}
+.wBody{flex:1;overflow:auto}
+.wContent{max-width:1300px;margin:auto;padding:28px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:25px;margin-bottom:20px}
+.card h2{font-size:21px;margin:0}
+.card>p{font-size:11px;color:var(--muted);margin:6px 0 16px}
+.choices{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.choice{background:#fff;border:1px solid var(--line);border-radius:11px;padding:15px;text-align:left;min-height:85px;display:block;transition:all .15s}
+.choice:hover{border-color:#9db9e7}
+.choice.selected{border-color:var(--blue);background:#f2f7ff;box-shadow:0 0 0 2px #e5effd}
+.choice i{color:var(--blue);font-size:18px;margin-bottom:7px;display:block}
+.choice strong{display:block;font-size:12px}
+.choice span{display:block;font-size:10px;color:var(--muted);margin-top:3px}
+.wFoot{background:#fff;border-top:1px solid var(--line);padding:12px 28px;display:flex;justify-content:space-between}
+
+/* Altitude Slider with 120m Legal Limit Indicator */
+.altSliderWrap{position:relative;padding-top:8px;padding-bottom:6px}
+.altTrackWrap{position:relative;display:flex;align-items:center}
+.altRange{width:100%;height:8px;border-radius:6px;-webkit-appearance:none;appearance:none;outline:none;cursor:pointer;background:linear-gradient(to right, #1769e0 0%, #1769e0 60%, #dc2626 60%, #dc2626 100%)}
+.altRange::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--blue);box-shadow:0 2px 6px rgba(0,0,0,.25);cursor:pointer;position:relative;z-index:3}
+.altRange.overLimit::-webkit-slider-thumb{border-color:#dc2626;background:#fef2f2}
+.altLimitLine{position:absolute;left:60%;top:-6px;bottom:-6px;width:2px;background:#dc2626;z-index:2;pointer-events:none}
+.altLimitTag{position:absolute;left:60%;transform:translateX(-50%);top:-20px;background:#dc2626;color:#fff;font-size:9px;font-weight:900;padding:2px 5px;border-radius:4px;white-space:nowrap}
+.altWarnBanner{margin-top:8px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:8px 10px;border-radius:8px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px}
+
+/* Map Header & Wrap */
+.mapHeaderActions{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;background:#f8fafc;padding:10px 14px;border-radius:10px;border:1px solid var(--line)}
+.mapSearch{display:flex;gap:6px;flex:1;min-width:240px}
+.mapSearch input{height:34px;border:1px solid var(--line);border-radius:8px;padding:0 10px;font-size:12px;flex:1;background:#fff}
+.mapWrap{position:relative}
+.map{height:540px;border:1px solid var(--line);border-radius:11px;overflow:hidden;position:relative;background:#e5e9ec;z-index:1}
+.mapTools{position:absolute;right:10px;top:10px;z-index:1000;display:flex;flex-wrap:wrap;gap:6px}
+.mapTools .btn{box-shadow:0 3px 10px rgba(0,0,0,.15);background:#fff}
+.mapHintBar{position:absolute;left:10px;bottom:24px;z-index:1000;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:8px;padding:7px 11px;font-size:11px;color:var(--txt);box-shadow:0 2px 8px rgba(0,0,0,.1)}
+
+/* Details Screen */
+.detailGrid{display:grid;grid-template-columns:1.3fr 1fr;gap:20px;align-items:start}
+.detailMap{height:460px;border-radius:11px;border:1px solid var(--line);overflow:hidden;position:relative;z-index:1}
+.exportBox{background:#f2f7ff;border:1px solid #b9d0f5;border-radius:12px;padding:16px;margin-top:16px}
+.exportBox h4{margin:0 0 6px;font-size:13px;color:var(--blue);display:flex;align-items:center;gap:6px}
+.exportBox p{margin:0 0 12px;font-size:11px;color:#415060;line-height:1.4}
+.exportBtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.exportOption{background:#fff;border:1px solid #b9d0f5;border-radius:10px;padding:12px;text-align:left;transition:all .15s}
+.exportOption:hover{border-color:var(--blue);background:#eaf2ff;transform:translateY(-1px)}
+.exportOption strong{display:block;font-size:12px;color:var(--blue);margin-bottom:3px}
+.exportOption span{display:block;font-size:10px;color:var(--muted);line-height:1.3}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:14px}
+.stat{border:1px solid var(--line);border-radius:9px;padding:10px;background:#fff}
+.stat .k{font-size:8px;color:var(--muted);text-transform:uppercase;font-weight:900}
+.stat .v{font-size:16px;color:var(--blue);font-weight:950;margin-top:3px}
+.stat .s{font-size:9px;color:var(--muted)}
+.paramGrid{display:grid;grid-template-columns:1.2fr 340px;gap:14px}
+.range{width:100%;accent-color:var(--blue)}
+.toggle{display:flex;gap:6px;margin-bottom:13px}
+.toggle .active{background:var(--soft);border-color:#9ebae7;color:var(--blue)}
+.review{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.reviewItem{border:1px solid var(--line);border-radius:9px;padding:10px;background:#fbfcfd}
+.reviewItem .k{font-size:8px;color:var(--muted);font-weight:900;text-transform:uppercase}
+.reviewItem .v{font-size:12px;font-weight:900;margin-top:3px}
+.alert{margin-top:14px;background:#fff7df;border:1px solid #efd994;border-radius:9px;padding:10px;font-size:10px;color:#745600;line-height:1.5}
+.toast{position:fixed;right:18px;bottom:18px;background:#17212b;color:#fff;padding:11px 14px;border-radius:9px;font-size:12px;z-index:9999;display:none;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+.toast.show{display:block}
+
+
+/* V4 — Organização da página inteira de visualização da missão */
+#projectDetail .wrap{max-width:1600px;padding:24px 30px 40px}
+#projectDetail #detailContent>.head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:18px;padding:2px 0 16px;border-bottom:1px solid var(--line)}
+#projectDetail .detailGrid{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(390px,.82fr);gap:20px;align-items:start}
+#projectDetail .detailGrid>div{min-width:0}
+#projectDetail .detailGrid .card{height:auto;min-width:0}
+#projectDetail .detailMap{height:clamp(390px,42vw,590px)}
+#projectDetail .stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+#projectDetail .review{grid-template-columns:repeat(2,minmax(0,1fr))}
+#projectDetail .aroTable{table-layout:fixed;width:100%}
+#projectDetail .aroTable th{width:38%}
+#projectDetail .aroTable td{overflow-wrap:anywhere}
+#projectDetail .exportBtns{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:1150px){
+ #projectDetail .wrap{padding:20px}
+ #projectDetail .detailGrid{grid-template-columns:minmax(0,1fr) minmax(340px,.9fr);gap:14px}
+ #projectDetail .detailMap{height:420px}
+ #projectDetail .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:900px){
+ #projectDetail .detailGrid{grid-template-columns:minmax(0,1fr)}
+ #projectDetail .detailMap{height:420px}
+ #projectDetail #detailContent>.head{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+ #projectDetail .wrap{padding:12px}
+ #projectDetail .detailMap{height:340px}
+ #projectDetail .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #projectDetail .review{grid-template-columns:1fr}
+ #projectDetail .exportBtns{grid-template-columns:1fr}
+}
+
+/* ARO (Avaliação de Risco Operacional) Styles */
+.aroHeader{background:linear-gradient(135deg,#0d3b66,#1769e0);color:#fff;padding:18px;border-radius:10px;margin-bottom:18px}
+.aroHeader h3{margin:0;font-size:18px;font-weight:900}
+.aroHeader p{margin:4px 0 0;font-size:11px;opacity:0.85}
+.aroSectionTitle{font-size:12px;font-weight:900;color:var(--blue);text-transform:uppercase;margin:18px 0 8px;border-bottom:2px solid #eef5ff;padding-bottom:4px;display:flex;align-items:center;gap:6px}
+.aroTable{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}
+.aroTable th,.aroTable td{border:1px solid var(--line);padding:8px 10px;text-align:left}
+.aroTable th{background:#f8fafc;font-weight:800;color:#334155}
+.aroMatrixTable{width:100%;border-collapse:collapse;text-align:center;font-size:10px;margin-top:10px}
+.aroMatrixTable td,.aroMatrixTable th{border:1px solid #cbd5e1;padding:6px 4px}
+.aroMatrixTable th{background:#e2e8f0;font-weight:800}
+.risk-extremo{background:#fecdd3 !important;color:#9f1239 !important;font-weight:900}
+.risk-alto{background:#ffedd5 !important;color:#9a3412 !important;font-weight:900}
+.risk-moderado{background:#fef9c3 !important;color:#854d0e !important;font-weight:900}
+.risk-baixo{background:#dcfce7 !important;color:#166534 !important;font-weight:900}
+.risk-muitobaixo{background:#e0f2fe !important;color:#075985 !important;font-weight:900}
+
+/* ESTILOS PARA IMPRESSÃO DA ARO (PDF ACERVO COM CORES PRESERVADAS) */
+@media print {
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+  body * { visibility: hidden; }
+  #aroPrintContainer, #aroPrintContainer * { visibility: visible; }
+  #aroPrintContainer { position: absolute; left: 0; top: 0; width: 100%; font-family: Arial, sans-serif; font-size: 10.5pt; color: #000; background: #fff; padding: 16px; }
+  .no-print { display: none !important; }
+  .page-break { page-break-before: always; }
+}
+
+@media(max-width:1100px){.paramGrid,.detailGrid{grid-template-columns:1fr}.choices,.projects{grid-template-columns:1fr 1fr}.auth{grid-template-columns:1fr}.authHero{display:none}}
+@media(max-width:700px){.projects{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN / REGISTRO / RECUPERAÇÃO -->
+<div id="auth" class="auth">
+  <div class="authHero">
+    <div class="logo">
+      <div class="logoIcon"><i class="fa-solid fa-drone"></i></div>
+      <div><b>GEOAGRESTE</b><div style="font-size:10px;color:#6b7885">Engenharia Cartográfica & Missões RPA</div></div>
+    </div>
+    
+    <div class="heroTitle">Democratizando o Mapeamento e Aerolevantamento em Comunidades e Favelas do Brasil.</div>
+    <div class="heroText">
+      Capacite sua comunidade, associação ou equipe técnica a utilizar drones acessíveis (como a linha DJI Mini e Air 3S) para realizar aerolevantamentos de alta precisão, apoiar projetos de regularização fundiária (REURB), mobilidade urbana e justiça espacial.
+    </div>
+
+    <div class="features">
+      <div class="feature"><i class="fa-solid fa-city"></i> Mapeamento de Favelas e Encostas</div>
+      <div class="feature"><i class="fa-solid fa-route"></i> Waylines & Waypoints para DJI RC</div>
+      <div class="feature"><i class="fa-solid fa-crosshairs"></i> Planejamento de Missões Aerofotogramétricas</div>
+      <div class="feature"><i class="fa-solid fa-shield-halved"></i> Emissão de ARO Completa (ANAC)</div>
+    </div>
+
+    <div style="margin-top:28px;padding:16px;background:#fff;border-radius:12px;border:1px solid #bfdbfe;box-shadow:0 4px 15px rgba(23,105,224,.06)">
+      <div style="font-size:11px;font-weight:900;color:var(--blue);text-transform:uppercase;margin-bottom:6px"><i class="fa-solid fa-heart"></i> Por que mapear nossas comunidades?</div>
+      <div style="font-size:11px;color:#334155;line-height:1.5">
+        O mapeamento aerofotogramétrico preciso em áreas vulneráveis é a base fundamental para planejar intervenções urbanas, acesso a serviços, mitigar riscos de deslizamento e garantir direitos de cidadania e moradia digna para milhares de famílias brasileiras.
+      </div>
+    </div>
+  </div>
+
+  <div class="authPanel">
+    <h2 id="authTitle">Entrar na plataforma</h2>
+    <p id="authSub">Acesse seus projetos e continue seus planejamentos.</p>
+
+    <!-- Botão de Login Rápido com Google (Simulado/Integrado) -->
+    <button type="button" class="btn-google" onclick="loginWithGoogle()">
+      <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.18v3.15C3.18 21.34 7.22 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.61H1.18C.43 8.13 0 9.87 0 12s.43 3.87 1.18 5.39l4.09-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.22 0 3.18 2.66 1.18 6.61l4.09 3.15c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>
+      Continuar com o Google
+    </button>
+
+    <div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--muted);font-size:10px;text-transform:uppercase;font-weight:800">
+      <div style="flex:1;height:1px;background:var(--line)"></div> ou com e-mail <div style="flex:1;height:1px;background:var(--line)"></div>
+    </div>
+
+    <div class="tabs">
+      <button id="tabLogin" class="tab active" onclick="authMode('login')">ENTRAR</button>
+      <button id="tabReg" class="tab" onclick="authMode('reg')">CRIAR CADASTRO</button>
+      <button id="tabRecover" class="tab" onclick="authMode('recover')">RECUPERAR</button>
+    </div>
+    <form id="loginForm" onsubmit="return login(event)">
+      <div class="field"><label>E-mail</label><input id="le" type="email" required placeholder="seu@email.com" value="admin@gmail.com"></div>
+      <div class="field"><label>Senha</label><input id="lp" type="password" required value="admin"></div>
+      <button type="submit" class="btn primary" style="width:100%;height:40px;justify-content:center">Entrar</button>
+      <div id="loginErr" class="error"></div>
+      <div class="hint">Admin padrão: admin@gmail.com / admin. Ou use o botão do Google acima para acesso imediato.</div>
+    </form>
+    <form id="regForm" class="hidden" onsubmit="register(event)">
+      <div class="field"><label>Nome completo</label><input id="rn" required></div>
+      <div class="grid2">
+        <div class="field"><label>CPF/CNPJ (Uso restrito ARO)</label><input id="rcpf" required placeholder="000.000.000-00"></div>
+        <div class="field"><label>Telefone</label><input id="rtel" required placeholder="(00) 00000-0000"></div>
+      </div>
+      <div class="field"><label>E-mail</label><input id="re" type="email" required></div>
+      <div class="grid2">
+        <div class="field"><label>Senha</label><input id="rp" type="password" required></div>
+        <div class="field"><label>Confirmar</label><input id="rp2" type="password" required></div>
+      </div>
+      <button class="btn primary" style="width:100%;height:40px;justify-content:center">Criar minha conta</button>
+      <div id="regErr" class="error"></div>
+    </form>
+    <form id="recoverForm" class="hidden" onsubmit="recoverPassword(event)">
+      <div class="field"><label>E-mail cadastrado</label><input id="recEmail" type="email" required placeholder="seu@email.com"></div>
+      <div class="field"><label>Nova senha</label><input id="recPass" type="password" required></div>
+      <div class="field"><label>Confirmar nova senha</label><input id="recPass2" type="password" required></div>
+      <button class="btn primary" style="width:100%;height:40px;justify-content:center">Redefinir senha</button>
+      <div id="recErr" class="error"></div>
+    </form>
+  </div>
+</div>
+
+<!-- APLICAÇÃO PRINCIPAL -->
+<div id="app" class="app hidden">
+  <header class="top">
+    <div class="brand" style="cursor:pointer" onclick="openDash()">
+      <div class="brandIcon"><i class="fa-solid fa-drone"></i></div>
+      <div><div class="brandName">GEOAGRESTE</div><div class="brandSub">Engenharia Cartográfica & Comunidades</div></div>
+    </div>
+    <div class="topRight">
+      <span id="roleBadge" class="roleBadge user">Usuário</span>
+      <div class="avatar" id="avatar">U</div>
+      <div class="user" id="topUser">Usuário</div>
+      <button class="btn small" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+    </div>
+  </header>
+
+  <!-- DASHBOARD -->
+  <main id="dashboard" class="screen">
+    <div class="wrap">
+      <div class="head">
+        <div>
+          <div class="eyebrow" id="dashEyebrow">Painel de projetos</div>
+          <div class="title" id="dashTitle">Projetos, Planos de Voo e AROs</div>
+          <div class="sub" id="dashSub">Visualize planos de voo da comunidade, baixe arquivos KMZ para o RC e gerencie missões de aerolevantamento.</div>
+        </div>
+        <button class="btn primary" onclick="newProject()"><i class="fa-solid fa-plus"></i> Novo projeto</button>
+      </div>
+      <div class="summaryGrid">
+        <div class="summary"><div class="k">Projetos Visíveis</div><div class="v" id="sProj">0</div><div class="s">na plataforma</div></div>
+        <div class="summary"><div class="k">Meus Projetos</div><div class="v" id="sMine">0</div><div class="s">sob sua gestão</div></div>
+        <div class="summary"><div class="k">Área Total Mapeada</div><div class="v" id="sArea">0.00 ha</div><div class="s">somatório geral</div></div>
+        <div class="summary"><div class="k">Último Projeto</div><div class="v" id="sLast" style="font-size:15px">—</div><div class="s">cadastrado</div></div>
+      </div>
+      <div class="panel">
+        <div class="panelHead">
+          <div><div class="panelTitle">Missões Cadastradas nas Comunidades</div><div class="panelSub">Clique no cartão para abrir o mapa detalhado, revisar os parâmetros da missão e exportar KMZ para o drone.</div></div>
+          <div class="filters">
+            <button class="filter active" onclick="setFilter('all',this)">Todos</button>
+            <button class="filter" onclick="setFilter('mine',this)">Meus Projetos</button>
+            <button class="filter" onclick="setFilter('others',this)">Outros Operadores</button>
+            <button class="filter" onclick="setFilter('planned',this)">Planejados</button>
+          </div>
+        </div>
+        <div id="projects" class="projects"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- VISUALIZAÇÃO DETALHADA DA MISSÃO E ARO -->
+  <main id="projectDetail" class="screen hidden">
+    <div class="wrap" id="detailContent"></div>
+  </main>
+</div>
+
+<!-- WIZARD PASSO A PASSO (8 ETAPAS) -->
+<div id="wizard" class="wizard hidden">
+  <div class="wHead">
+    <div class="wTop">
+      <div>
+        <div class="wTitle" id="wTitle">Novo projeto</div>
+        <div class="wSub">Preencha as etapas do planejamento e a Avaliação de Risco Operacional (ARO).</div>
+      </div>
+      <button class="btn small" onclick="cancelWizard()">Cancelar</button>
+    </div>
+    <div id="steps" class="steps"></div>
+  </div>
+  <div class="wBody"><div id="wContent" class="wContent"></div></div>
+  <div class="wFoot">
+    <button id="back" class="btn" onclick="prev()">← Voltar</button>
+    <div class="right"><button id="next" class="btn primary" onclick="next()">Continuar →</button></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- CONTAINER DE IMPRESSÃO EXCLUSIVO PARA O DOCUMENTO ARO (PDF) -->
+<div id="aroPrintContainer" class="hidden"></div>
+
+<script>
+const DRONES={
+  "Mini 2":{f:4.49,sw:6.3,sh:4.725,w:4000,batteryMins:22},
+  "Mini 3":{f:8.38,sw:6.3,sh:4.725,w:4000,batteryMins:28},
+  "Mini 3 Pro":{f:8.38,sw:6.3,sh:4.725,w:4000,batteryMins:30},
+  "Mini 4 Pro":{f:8.38,sw:6.3,sh:4.725,w:4000,batteryMins:32},
+  "Air 3S":{f:8.4,sw:9.6,sh:7.2,w:8192,batteryMins:40},
+  "Mavic 3M":{f:12.29,sw:17.3,sh:13,w:5280,batteryMins:38}
+};
+
+let user=null, projects=[], filter='all', step=1, editId=null, draft=null, pts=[], mode='gsd';
+let lMap=null, polyLayer=null, markersLayer=null, linesLayer=null, currentTileLayer=null, mapStyle='sat';
+let dMap=null;
+let dashMiniMaps=[];
+let memStore={};
+
+// 8 ETAPAS DO WIZARD
+const STEP=[
+  ['Informações','fa-file-lines'],
+  ['Operação','fa-calendar-days'],
+  ['Tipo de voo','fa-route'],
+  ['Aeronave','fa-drone'],
+  ['Área','fa-draw-polygon'],
+  ['Parâmetros','fa-sliders'],
+  ['Avaliação ARO','fa-shield-halved'],
+  ['Revisão','fa-check']
+];
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+const fmt2=n=>(Number(n)||0).toFixed(2);
+
+function readStore(key,fallback){try{const v=localStorage.getItem(key);if(v!==null)return JSON.parse(v)}catch(err){}return Object.prototype.hasOwnProperty.call(memStore,key)?memStore[key]:fallback}
+function writeStore(key,value){memStore[key]=value;try{localStorage.setItem(key,JSON.stringify(value));return true}catch(err){return false}}
+
+const ADMIN_USER={id:'admin',name:'Administrador GeoAgreste',cpf:'000.000.000-00',phone:'(75) 99999-9999',email:'admin@gmail.com',password:'admin',role:'admin'};
+
+function isAdmin(){
+  return user && (user.role === 'admin' || String(user.email||'').trim().toLowerCase() === ADMIN_USER.email);
+}
+
+function canEditProject(p){
+  if(!user || !p) return false;
+  if(isAdmin()) return true;
+  return String(p.ownerEmail||'').trim().toLowerCase() === String(user.email||'').trim().toLowerCase();
+}
+
+function canAccessARO(p){
+  if(!user || !p) return false;
+  if(isAdmin()) return true;
+  return String(p.ownerEmail||'').trim().toLowerCase() === String(user.email||'').trim().toLowerCase();
+}
+
+function users(){
+  const u=readStore('geo_users',[]);
+  const arr=Array.isArray(u)?u:[];
+  const adminIdx=arr.findIndex(x=>String(x.email||'').trim().toLowerCase()===ADMIN_USER.email);
+  if(adminIdx<0){arr.unshift(ADMIN_USER);}else{arr[adminIdx]={...arr[adminIdx],...ADMIN_USER};}
+  return arr;
+}
+function saveUsers(u){
+  const clean=Array.isArray(u)?u:[];
+  const adminIndex=clean.findIndex(x=>String(x.email||'').trim().toLowerCase()===ADMIN_USER.email);
+  if(adminIndex<0) clean.unshift(ADMIN_USER);
+  else clean[adminIndex]={...ADMIN_USER,...clean[adminIndex],email:ADMIN_USER.email,password:'admin',role:'admin'};
+  writeStore('geo_users',clean);
+}
+
+function loadAllProjects(){
+  let globalList = readStore('geo_projects_global', null);
+  if(!Array.isArray(globalList)){
+    globalList = [];
+    const allU = users();
+    allU.forEach(u => {
+      const em = String(u.email||'').trim().toLowerCase();
+      const oldList = readStore('geo_projects_'+em, []);
+      if(Array.isArray(oldList)){
+        oldList.forEach(item => {
+          if(!globalList.some(g => g.id === item.id)){
+            item.ownerEmail = item.ownerEmail || em;
+            item.ownerName = item.ownerName || u.name;
+            globalList.push(item);
+          }
+        });
+      }
+    });
+    writeStore('geo_projects_global', globalList);
+  }
+  projects = globalList;
+  return projects;
+}
+
+function saveAllProjects(){
+  writeStore('geo_projects_global', projects);
+}
+
+function saveSession(email){
+  try{sessionStorage.setItem('geo_user',email)}catch(err){try{localStorage.setItem('geo_session',email)}catch(e){}}
+}
+function getSession(){
+  try{return sessionStorage.getItem('geo_user')||localStorage.getItem('geo_session')}catch(err){try{return localStorage.getItem('geo_session')}catch(e){return null}}
+}
+function clearSession(){
+  try{sessionStorage.removeItem('geo_user')}catch(err){}
+  try{localStorage.removeItem('geo_session')}catch(err){}
+}
+
+function toast(x){
+  const t=$('toast');
+  if(!t)return;
+  t.textContent=x;
+  t.classList.add('show');
+  clearTimeout(window.tt);
+  window.tt=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+function authMode(m){
+  const login=m==='login', reg=m==='reg', recover=m==='recover';
+  $('loginForm').classList.toggle('hidden',!login);
+  $('regForm').classList.toggle('hidden',!reg);
+  $('recoverForm').classList.toggle('hidden',!recover);
+  $('tabLogin').classList.toggle('active',login);
+  $('tabReg').classList.toggle('active',reg);
+  $('tabRecover').classList.toggle('active',recover);
+  $('authTitle').textContent=login?'Entrar na plataforma':reg?'Criar seu cadastro':'Recuperar acesso';
+  $('authSub').textContent=login?'Acesse seus projetos e continue seus planejamentos.':reg?'Cadastre-se gratuitamente para começar.':'Informe seu e-mail cadastrado e defina uma nova senha.';
+  $('loginErr').textContent='';$('regErr').textContent='';$('recErr').textContent='';
+}
+
+// LOGIN COM GOOGLE (SIMULADO / INTEGRADO AO SISTEMA SEM BACKEND)
+function loginWithGoogle(){
+  const gEmail = 'operador.comunitario@gmail.com';
+  const gName = 'Operador Comunitário (Google)';
+  const allU = users();
+  let u = allU.find(x => String(x.email||'').trim().toLowerCase() === gEmail);
+  if(!u){
+    u = {id: Date.now(), name: gName, cpf:'000.000.000-00', phone:'(71) 98888-7777', email: gEmail, password:'google_oauth_user', role:'user'};
+    allU.push(u);
+    saveUsers(allU);
+  }
+  user = u;
+  saveSession(gEmail);
+  loadAllProjects();
+  openDash();
+  toast('Autenticado com sucesso via Google!');
+}
+
+function register(e){
+  if(e)e.preventDefault();
+  const email=$('re').value.trim().toLowerCase(), pass=$('rp').value, pass2=$('rp2').value, er=$('regErr');
+  er.textContent='';
+  if(!email||!pass){er.textContent='Preencha e-mail e senha.';return false}
+  if(pass!==pass2){er.textContent='As senhas não conferem.';return false}
+  if(email===ADMIN_USER.email){er.textContent='Este e-mail é reservado para o administrador.';return false}
+  const u=users();
+  if(u.some(x=>String(x.email||'').trim().toLowerCase()===email)){er.textContent='Este e-mail já está cadastrado.';return false}
+  u.push({id:Date.now(), name:$('rn').value.trim(), cpf:$('rcpf').value.trim(), phone:$('rtel').value.trim(), email, password:pass, role:'user'});
+  saveUsers(u);
+  $('le').value=email; $('lp').value='';
+  authMode('login');
+  toast('Cadastro criado com sucesso!');
+  return false;
+}
+
+function login(e){
+  if(e)e.preventDefault();
+  $('loginErr').textContent='';
+  const email=$('le').value.trim().toLowerCase(), pass=$('lp').value;
+  const allUsers=users();
+  const u=allUsers.find(x=>String(x.email||'').trim().toLowerCase()===email && String(x.password??'')===pass);
+  if(!u){
+    $('loginErr').textContent='E-mail ou senha inválidos.';
+    return false;
+  }
+  user=u;
+  saveSession(email);
+  loadAllProjects();
+  openDash();
+  toast(isAdmin() ? 'Bem-vindo ao Ambiente Administrador!' : 'Login realizado com sucesso!');
+  return false;
+}
+
+function recoverPassword(e){
+  if(e)e.preventDefault();
+  const email=$('recEmail').value.trim().toLowerCase(), pass=$('recPass').value, pass2=$('recPass2').value, er=$('recErr');
+  er.textContent='';
+  if(!pass){er.textContent='Informe uma nova senha.';return false}
+  if(pass!==pass2){er.textContent='As senhas não conferem.';return false}
+  const u=users(), i=u.findIndex(x=>String(x.email||'').trim().toLowerCase()===email);
+  if(i<0){er.textContent='E-mail não encontrado.';return false}
+  u[i].password=pass;
+  saveUsers(u);
+  $('le').value=email; $('lp').value='';
+  authMode('login');
+  toast('Senha redefinida com sucesso.');
+  return false;
+}
+
+function logout(){ clearSession(); location.reload(); }
+
+function boot(){
+  users();
+  const e=getSession();
+  const allU=users();
+  const u=allU.find(x=>String(x.email||'').trim().toLowerCase()===String(e||'').trim().toLowerCase());
+  if(u){ user=u; loadAllProjects(); openDash(); }
+}
+
+function openDash(){
+  loadAllProjects();
+  $('auth').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  $('wizard').classList.add('hidden');
+  $('projectDetail').classList.add('hidden');
+  $('dashboard').classList.remove('hidden');
+  $('topUser').textContent=user.name;
+  $('avatar').textContent=user.name[0].toUpperCase();
+
+  const badge = $('roleBadge');
+  if(isAdmin()){
+    badge.textContent = 'Ambiente Admin';
+    badge.className = 'roleBadge admin';
+    $('dashEyebrow').textContent = 'Painel Geral • Administrador';
+    $('dashTitle').textContent = 'Todos os Projetos, Missões e AROs';
+    $('dashSub').textContent = 'Como administrador, você possui acesso total para visualizar, editar, exportar KMZ e emitir AROs de todos os operadores.';
+  } else {
+    badge.textContent = 'Ambiente Operador';
+    badge.className = 'roleBadge user';
+    $('dashEyebrow').textContent = 'Painel Comunitário';
+    $('dashTitle').textContent = 'Meus Projetos & Planos de Voo';
+    $('dashSub').textContent = 'Gerencie suas missões de aerolevantamento com drones compactos e consulte planos de voo da comunidade.';
+  }
+
+  renderDash();
+}
+
+function destroyDashMiniMaps(){
+  dashMiniMaps.forEach(m => { try{ m.remove(); }catch(e){} });
+  dashMiniMaps = [];
+}
+
+function renderDash(){
+  destroyDashMiniMaps();
+  const myEmail = String(user?.email||'').trim().toLowerCase();
+  const myProjects = projects.filter(x => String(x.ownerEmail||'').trim().toLowerCase() === myEmail);
+
+  $('sProj').textContent=projects.length;
+  $('sMine').textContent=myProjects.length;
+  $('sArea').textContent=fmt2(projects.reduce((a,x)=>a+(+x.areaHa||0),0))+' ha';
+  $('sLast').textContent=projects[0]?.name||'—';
+
+  let a = projects;
+  if(filter === 'mine') a = projects.filter(x => String(x.ownerEmail||'').trim().toLowerCase() === myEmail);
+  else if(filter === 'others') a = projects.filter(x => String(x.ownerEmail||'').trim().toLowerCase() !== myEmail);
+  else if(filter === 'planned') a = projects.filter(x => x.status === 'planned');
+
+  $('projects').innerHTML=a.length?a.map(p=>{
+    const isMine = String(p.ownerEmail||'').trim().toLowerCase() === myEmail;
+    const editable = canEditProject(p);
+    const respVoo = p.flightRespName || p.ownerName || 'Não informado';
+    return `
+    <article class="project" onclick="viewProject('${p.id}')">
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px">
+          <h3>${esc(p.name)}</h3>
+          ${isMine ? `<span class="pill blue">Meu Projeto</span>` : `<span class="pill orange">De: ${esc(p.ownerName||'Outro')}</span>`}
+        </div>
+        <div class="desc">${esc(p.description||'Sem descrição')}</div>
+        <div id="miniMap_${p.id}" class="miniMapBox" onclick="event.stopPropagation()"></div>
+        <div class="pills">
+          <span class="pill ${p.status==='planned'?'green':''}">${p.status==='planned'?'Planejado':'Rascunho'}</span>
+          <span class="pill">${esc(p.flightType||'—')}</span>
+          <span class="pill">${fmt2(p.areaHa||0)} ha</span>
+        </div>
+        <div class="pills">
+          <span class="pill"><i class="fa-solid fa-user-check"></i> Piloto: ${esc(respVoo)}</span>
+          <span class="pill">DJI ${esc(p.drone||'—')}</span>
+        </div>
+      </div>
+      <div class="actions" onclick="event.stopPropagation()">
+        <button class="btn small primary" onclick="viewProject('${p.id}')"><i class="fa-solid fa-eye"></i> Visualizar, ODM & ARO</button>
+        ${editable ? `<button class="btn small" onclick="editProject('${p.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>` : ''}
+        ${editable ? `<button class="btn small danger" onclick="delProject('${p.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>` : ''}
+      </div>
+    </article>`;
+  }).join(''):`<div class="empty"><i class="fa-regular fa-folder-open"></i><h3>Nenhum projeto encontrado</h3><div>Clique em “Novo projeto” para cadastrar uma missão.</div></div>`;
+
+  setTimeout(() => {
+    a.forEach(p => {
+      const el = $('miniMap_' + p.id);
+      if(!el) return;
+      const pPts = (p.points || []).map(x => [x[1], x[0]]);
+      const cLat = pPts.length ? pPts[0][0] : -12.9714;
+      const cLng = pPts.length ? pPts[0][1] : -38.5014;
+      const mm = L.map(el, {
+        zoomControl: false,
+        attributionControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false
+      }).setView([cLat, cLng], 14);
+
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(mm);
+
+      if(pPts.length >= 3){
+        const poly = L.polygon(pPts, {color: '#1769e0', fillColor: '#1769e0', fillOpacity: 0.25, weight: 2}).addTo(mm);
+        mm.fitBounds(poly.getBounds(), {padding: [12, 12]});
+      }
+      dashMiniMaps.push(mm);
+    });
+  }, 40);
+}
+
+function getPeriodLabel(p){
+  if(!p) return 'Não definida';
+  if(p.isDateRange){
+    const d1 = p.periodDateStart ? new Date(p.periodDateStart+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    const d2 = p.periodDateEnd ? new Date(p.periodDateEnd+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    return `${d1} até ${d2}`;
+  } else {
+    return p.periodDate ? new Date(p.periodDate+'T12:00:00').toLocaleDateString('pt-BR') : (p.period || 'Não definida');
+  }
+}
+
+// =========================================================================
+// GERAÇÃO DE LINHAS DE VOO (WAYLINES) E WAYPOINTS ENUMERADOS PARA O RC
+// =========================================================================
+function generateFlightLines(pointsArr, settings){
+  if(!pointsArr || pointsArr.length < 3) return {lines: [], waylineEndpoints: [], waypoints: [], rawCount: 0};
+  const lats = pointsArr.map(p => p[1]), lngs = pointsArr.map(p => p[0]);
+  const lat0 = (Math.min(...lats) + Math.max(...lats)) / 2;
+  const lng0 = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+  const kx = 111320 * Math.cos(lat0 * Math.PI / 180);
+  const ky = 110540;
+
+  const polyXY = pointsArr.map(p => ({
+    x: (p[0] - lng0) * kx,
+    y: (p[1] - lat0) * ky
+  }));
+
+  const angleRad = ((settings.angle || 0) * Math.PI) / 180;
+  const cosA = Math.cos(-angleRad), sinA = Math.sin(-angleRad);
+  const cosB = Math.cos(angleRad), sinB = Math.sin(angleRad);
+
+  const rotPoly = polyXY.map(pt => ({
+    x: pt.x * cosA - pt.y * sinA,
+    y: pt.x * sinA + pt.y * cosA
+  }));
+
+  const minX = Math.min(...rotPoly.map(p => p.x));
+  const maxX = Math.max(...rotPoly.map(p => p.x));
+
+  const alt = Number(settings.alt || 60);
+  const speed = Number(settings.speed || 8);
+  const droneSpec = DRONES[settings.drone] || DRONES["Mini 4 Pro"];
+  const fw = alt * droneSpec.sw / droneSpec.f;
+  const fh = alt * droneSpec.sh / droneSpec.f;
+  const lineSpacing = Math.max(2, fw * (1 - (settings.side || 70) / 100));
+  const photoSpacing = Math.max(2, fh * (1 - (settings.front || 80) / 100));
+
+  const lines = [];
+  const waylineEndpoints = [];
+  let rawWaypoints = [];
+  let dir = 1;
+  let epCounter = 1;
+
+  for(let x = minX + lineSpacing * 0.3; x <= maxX; x += lineSpacing){
+    const intersections = [];
+    for(let i = 0; i < rotPoly.length; i++){
+      const p1 = rotPoly[i];
+      const p2 = rotPoly[(i + 1) % rotPoly.length];
+      if((p1.x <= x && p2.x > x) || (p2.x <= x && p1.x > x)){
+        const t = (x - p1.x) / (p2.x - p1.x);
+        const y = p1.y + t * (p2.y - p1.y);
+        intersections.push(y);
+      }
+    }
+    intersections.sort((a, b) => a - b);
+
+    for(let k = 0; k + 1 < intersections.length; k += 2){
+      let yStart = intersections[k];
+      let yEnd = intersections[k + 1];
+      if(dir < 0) [yStart, yEnd] = [yEnd, yStart];
+
+      const toGeoPrecise = (rx, ry) => {
+        const ox = rx * cosB - ry * sinB;
+        const oy = rx * sinB + ry * cosB;
+        return [lng0 + ox / kx, lat0 + oy / ky];
+      };
+
+      const startGeo = toGeoPrecise(x, yStart);
+      const endGeo = toGeoPrecise(x, yEnd);
+      lines.push([startGeo, endGeo]);
+
+      waylineEndpoints.push({
+        index: epCounter++,
+        lng: startGeo[0],
+        lat: startGeo[1],
+        alt: alt,
+        speed: speed,
+        role: 'Início de Linha'
+      });
+      waylineEndpoints.push({
+        index: epCounter++,
+        lng: endGeo[0],
+        lat: endGeo[1],
+        alt: alt,
+        speed: speed,
+        role: 'Fim de Linha'
+      });
+
+      const segLen = Math.abs(yEnd - yStart);
+      const steps = Math.max(1, Math.floor(segLen / photoSpacing));
+      for(let s = 0; s <= steps; s++){
+        const frac = steps === 0 ? 0 : s / steps;
+        const wy = yStart + (yEnd - yStart) * frac;
+        const wGeo = toGeoPrecise(x, wy);
+        rawWaypoints.push({
+          lng: wGeo[0],
+          lat: wGeo[1],
+          alt: alt,
+          speed: speed,
+          isEndpoint: (s === 0 || s === steps)
+        });
+      }
+      dir *= -1;
+    }
+  }
+
+  const reductionPct = settings.reductionPct !== undefined ? settings.reductionPct : 0;
+  let waypoints = [];
+  if(reductionPct <= 0){
+    waypoints = rawWaypoints.map((wp, idx) => ({...wp, index: idx + 1}));
+  } else {
+    const keepRatio = 1 - (reductionPct / 100);
+    const stepSkip = Math.max(1, Math.round(1 / keepRatio));
+    let counter = 1;
+    rawWaypoints.forEach((wp, idx) => {
+      if(idx === 0 || idx === rawWaypoints.length - 1 || wp.isEndpoint || idx % stepSkip === 0){
+        waypoints.push({...wp, index: counter++});
+      }
+    });
+  }
+
+  return {lines, waylineEndpoints, waypoints, rawCount: rawWaypoints.length};
+}
+
+// =========================================================================
+// TELA DE VISUALIZAÇÃO COMPLETA DA MISSÃO E ARO
+// =========================================================================
+function viewProject(id){
+  loadAllProjects();
+  const p = projects.find(x => x.id === id);
+  if(!p) return;
+
+  const editable = canEditProject(p);
+  const aroAllowed = canAccessARO(p);
+
+  $('dashboard').classList.add('hidden');
+  $('wizard').classList.add('hidden');
+  $('projectDetail').classList.remove('hidden');
+
+  const s = p.settings || {};
+  const reduction = s.reductionPct !== undefined ? s.reductionPct : 0;
+  const flightData = generateFlightLines(p.points, s);
+  const totalLines = flightData.lines.length;
+  const totalEndpoints = flightData.waylineEndpoints.length;
+  const totalWps = flightData.waypoints.length;
+  const rawWps = flightData.rawCount;
+
+  const droneSpec = DRONES[p.drone] || DRONES["Mini 4 Pro"];
+  const speed = Number(s.speed || 8);
+  const altVal = Number(p.calc?.a || s.alt || 60);
+
+  const totalDistM = flightData.lines.reduce((acc, l) => {
+    const dx = (l[1][0] - l[0][0]) * 111320 * Math.cos(l[0][1]*Math.PI/180);
+    const dy = (l[1][1] - l[0][1]) * 110540;
+    return acc + Math.sqrt(dx*dx + dy*dy);
+  }, 0);
+  
+  const flightTimeSec = (totalDistM / speed) + (totalWps * 1.5);
+  const flightTimeMins = flightTimeSec / 60;
+  const effectiveBatteryMins = droneSpec.batteryMins * 0.80;
+  const batteriesNeeded = Math.max(1, Math.ceil(flightTimeMins / effectiveBatteryMins));
+
+  const aro = p.aro || {};
+  const respVooNome = p.flightRespName || aro.respName || p.ownerName || 'Não informado';
+  const respVooContato = p.flightRespContact || aro.respContact || 'Não informado';
+
+  $('detailContent').innerHTML = `
+    <div class="head" style="margin-bottom:18px;flex-wrap:wrap">
+      <div>
+        <button class="btn small" onclick="openDash()" style="margin-bottom:10px"><i class="fa-solid fa-arrow-left"></i> Voltar aos projetos</button>
+        <div class="eyebrow">${aroAllowed ? 'Resumo da Missão & ARO' : 'Visualização Comunitária do Plano de Voo'}</div>
+        <div class="title">${esc(p.name)}</div>
+        <div class="sub">${esc(p.description || 'Sem descrição cadastrada.')}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn primary" onclick="downloadMission('${p.id}', 'waylines')"><i class="fa-solid fa-file-export"></i> KMZ Waylines (RC)</button>
+        <button class="btn" onclick="downloadMission('${p.id}', 'waypoints')"><i class="fa-solid fa-location-dot"></i> KMZ Waypoints (${totalWps})</button>
+        ${aroAllowed ? `<button class="btn green" onclick="printARO('${p.id}')"><i class="fa-solid fa-file-pdf"></i> Imprimir ARO (PDF)</button>` : ''}
+        ${editable ? `<button class="btn" onclick="editProject('${p.id}')"><i class="fa-solid fa-pen"></i> Editar</button>` : ''}
+        ${editable ? `<button class="btn danger" onclick="delProject('${p.id}', true)"><i class="fa-solid fa-trash"></i></button>` : ''}
+      </div>
+    </div>
+
+    ${altVal > 120 ? `
+      <div class="altWarnBanner" style="margin-bottom:16px">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span><b>Aviso Operacional:</b> Altitude planejada de <b>${fmt2(altVal)} m</b> excede o limite padrão de 120.00 m (400 pés AGL). Requer autorização SARPAS/DECEA.</span>
+      </div>` : ''}
+
+    <div class="detailGrid">
+      <!-- COLUNA ESQUERDA: MAPA, ESTATÍSTICAS E EXPORTAÇÃO -->
+      <div>
+        <div class="card" style="padding:18px;margin-bottom:20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <h3 style="margin:0;font-size:15px"><i class="fa-solid fa-map-location-dot" style="color:var(--blue)"></i> Rotas e Waylines no Terreno</h3>
+            <span class="pill green">${p.status === 'planned' ? 'Missão Pronta' : 'Rascunho'}</span>
+          </div>
+
+          <div style="background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center">
+            <div>
+              <label style="font-size:10px;font-weight:900;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px">Modo de Exibição no Mapa</label>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button id="btnViewWl" class="btn small primary" onclick="switchDetailView('${p.id}', 'waylines')"><i class="fa-solid fa-route"></i> Waylines + Pontas (${totalEndpoints})</button>
+                <button id="btnViewWp" class="btn small" onclick="switchDetailView('${p.id}', 'waypoints')"><i class="fa-solid fa-location-dot"></i> Waypoints (${totalWps})</button>
+              </div>
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:900;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px">Redução Waypoints: <span id="lblRedPct" style="color:var(--blue)">${fmt2(reduction)}%</span></label>
+              <input type="range" class="range" min="0" max="80" step="5" value="${reduction}" ${!editable ? 'disabled' : ''} oninput="updateLiveReduction('${p.id}', this.value)">
+            </div>
+          </div>
+
+          <div id="detailMap" class="detailMap"></div>
+
+          <div class="stats" style="margin-top:12px">
+            <div class="stat"><div class="k">Área Total</div><div class="v">${fmt2(p.areaHa||0)} ha</div><div class="s">${(p.points||[]).length} vértices</div></div>
+            <div class="stat"><div class="k">Waypoints</div><div class="v" style="color:var(--blue)" id="statWpCount">${totalWps}</div><div class="s">fotos programadas</div></div>
+            <div class="stat"><div class="k">Tempo de Voo</div><div class="v" id="statTime">${time(flightTimeSec)}</div><div class="s">duração estimada</div></div>
+            <div class="stat"><div class="k">Baterias</div><div class="v" style="color:var(--green)" id="statBat"><i class="fa-solid fa-battery-three-quarters"></i> ${batteriesNeeded} un.</div><div class="s">DJI ${esc(p.drone)}</div></div>
+          </div>
+
+          <div class="exportBox">
+            <h4><i class="fa-solid fa-download"></i> Exportação Arquivo de Voo (.KMZ para o RC)</h4>
+            <p>Baixe o arquivo pronto para carregar no controle do drone (DJI Pilot 2 / FlightHub):</p>
+            <div class="exportBtns">
+              <button class="exportOption" onclick="downloadMission('${p.id}', 'waylines')">
+                <strong><i class="fa-solid fa-route"></i> Waylines + Pontas (.KMZ)</strong>
+                <span>Exporta as <b>${totalLines} linhas</b> com os <b>${totalEndpoints} pontos das pontas</b> enumerados.</span>
+              </button>
+              <button class="exportOption" onclick="downloadMission('${p.id}', 'waypoints')">
+                <strong><i class="fa-solid fa-location-dot"></i> Rota Completa Waypoints (.KMZ)</strong>
+                <span>Exporta todos os <b>${totalWps} pontos de parada</b> de disparo fotográfico.</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div><!-- /coluna esquerda: mapa, estatísticas e exportação -->
+
+      <!-- COLUNA DIREITA: RESPONSÁVEL, PARÂMETROS & ARO -->
+      <div>
+        <div class="card" style="padding:20px;margin-bottom:16px">
+          <h3 style="margin:0 0 12px;font-size:15px"><i class="fa-solid fa-user-check" style="color:var(--blue)"></i> Piloto e Responsável pelo Voo</h3>
+          <div class="review">
+            <div class="reviewItem"><div class="k">Piloto / Responsável</div><div class="v">${esc(respVooNome)}</div></div>
+            <div class="reviewItem"><div class="k">Contato Operacional</div><div class="v">${esc(respVooContato)}</div></div>
+            <div class="reviewItem"><div class="k">Criador do Projeto</div><div class="v">${esc(p.ownerName || 'Operador')}</div></div>
+            <div class="reviewItem"><div class="k">Aeronave</div><div class="v">DJI ${esc(p.drone)}</div></div>
+          </div>
+        </div>
+
+        <div class="card" style="padding:20px;margin-bottom:16px">
+          <h3 style="margin:0 0 12px;font-size:15px"><i class="fa-solid fa-clipboard-list" style="color:var(--blue)"></i> Parâmetros de Voo Cadastrados</h3>
+          
+          <div style="font-size:10px;font-weight:900;color:var(--muted);text-transform:uppercase;margin:10px 0 6px">1. Período & Operação</div>
+          <div class="review">
+            <div class="reviewItem"><div class="k">Finalidade</div><div class="v">${esc(p.purpose||'—')}</div></div>
+            <div class="reviewItem"><div class="k">Tipo de Voo</div><div class="v">${esc(p.flightType||'—')}</div></div>
+            <div class="reviewItem" style="grid-column:1/-1"><div class="k">Data / Intervalo</div><div class="v" style="color:var(--blue)"><i class="fa-solid fa-calendar"></i> ${getPeriodLabel(p)}</div></div>
+            <div class="reviewItem"><div class="k">Horário Previsto</div><div class="v">${esc(p.periodStart||'08:00')} às ${esc(p.periodEnd||'11:00')}</div></div>
+            <div class="reviewItem"><div class="k">Campanha</div><div class="v">${esc(p.campaign||'Voo único')}</div></div>
+          </div>
+
+          <div style="font-size:10px;font-weight:900;color:var(--muted);text-transform:uppercase;margin:16px 0 6px">2. Parâmetros Fotogramétricos</div>
+          <div class="review">
+            <div class="reviewItem"><div class="k">GSD Calculado</div><div class="v" style="color:var(--blue)">${fmt2(p.calc?.g||s.gsd||0)} cm/px</div></div>
+            <div class="reviewItem"><div class="k">Altitude de Voo</div><div class="v" style="color:${altVal > 120 ? '#dc2626' : 'var(--blue)'}">${fmt2(altVal)} metros</div></div>
+            <div class="reviewItem"><div class="k">Sobreposição Frontal</div><div class="v">${fmt2(s.front||80)}%</div></div>
+            <div class="reviewItem"><div class="k">Sobreposição Lateral</div><div class="v">${fmt2(s.side||70)}%</div></div>
+            <div class="reviewItem"><div class="k">Rotação de Linhas</div><div class="v">${fmt2(s.angle||0)}°</div></div>
+            <div class="reviewItem"><div class="k">Velocidade</div><div class="v">${fmt2(speed)} m/s</div></div>
+          </div>
+        </div>
+
+        ${aroAllowed ? `
+        <div class="card" style="padding:20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <h3 style="margin:0;font-size:15px"><i class="fa-solid fa-shield-halved" style="color:var(--blue)"></i> Avaliação de Risco Operacional (ARO)</h3>
+            <button class="btn small green" onclick="printARO('${p.id}')"><i class="fa-solid fa-print"></i> PDF Acervo</button>
+          </div>
+
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.4">
+            Documento individual. Conformidade: <b>ANAC RBAC-E nº 94 | IS E94-003</b>.
+          </div>
+
+          <table class="aroTable">
+            <tr><th>Operador (Empresa)</th><td>${esc(aro.opName || p.ownerName)} (${esc(aro.opCpf || '—')})</td></tr>
+            <tr><th>Piloto em Comando</th><td>${esc(aro.respName || p.ownerName)} (${esc(aro.respCpf || '—')})</td></tr>
+            <tr><th>Observador</th><td>${esc(aro.obsName || 'Não informado')} (${esc(aro.obsCpf || '—')})</td></tr>
+            <tr><th>Aeronave & Registro</th><td>DJI ${esc(p.drone)} | ANAC: ${esc(aro.droneAnac || '—')}</td></tr>
+            <tr><th>Seguro RETA</th><td>${esc(aro.droneReta || 'Em dia')}</td></tr>
+            <tr><th>Área Segregada</th><td>${aro.segregada === 'SIM' ? 'SIM (Sem terceiros no raio de 30m)' : 'NÃO'}</td></tr>
+          </table>
+
+          <div style="margin-top:14px;background:#f8fafc;padding:10px;border-radius:8px;border:1px solid var(--line)">
+            <div style="font-size:10px;font-weight:900;color:var(--muted);text-transform:uppercase">Situação Geral de Risco</div>
+            <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+              <span class="pill green"><i class="fa-solid fa-check"></i> Perda de Link (3C - Moderado)</span>
+              <span class="pill green"><i class="fa-solid fa-check"></i> Tráfego Aéreo (1A - Moderado)</span>
+              <span class="pill green"><i class="fa-solid fa-check"></i> Ventos Rajadas (4A - Controlado)</span>
+            </div>
+          </div>
+        </div>
+        ` : `
+        <div class="card" style="padding:20px;background:#f8fafc;border-style:dashed">
+          <div style="display:flex;align-items:center;gap:10px;color:var(--muted)">
+            <i class="fa-solid fa-lock" style="font-size:20px;color:#94a3b8"></i>
+            <div>
+              <strong style="display:block;font-size:13px;color:var(--txt)">ARO e Dados Pessoais Restritos</strong>
+              <span style="font-size:11px;line-height:1.4;display:block;margin-top:3px">A Avaliação de Risco Operacional (ARO) e documentos pessoais são individuais de cada operador e visíveis apenas para o proprietário da missão e para o Administrador.</span>
+            </div>
+          </div>
+        </div>
+        `}
+      </div>
+    </div>
+  `;
+
+  setTimeout(() => {
+    currentDetailViewMode = 'waylines';
+    renderDetailMap(p, 'waylines');
+  }, 50);
+}
+
+let currentDetailViewMode = 'waylines';
+
+function switchDetailView(id, mode){
+  currentDetailViewMode = mode;
+  const p = projects.find(x => x.id === id);
+  if(!p) return;
+  
+  $('btnViewWl').className = mode === 'waylines' ? 'btn small primary' : 'btn small';
+  $('btnViewWp').className = mode === 'waypoints' ? 'btn small primary' : 'btn small';
+  
+  renderDetailMap(p, mode);
+}
+
+function updateLiveReduction(id, val){
+  const p = projects.find(x => x.id === id);
+  if(!p || !canEditProject(p)) return;
+  if(!p.settings) p.settings = {};
+  p.settings.reductionPct = parseInt(val, 10);
+  saveAllProjects();
+
+  const span = document.getElementById('lblRedPct');
+  if(span) span.textContent = fmt2(val) + '%';
+
+  const flightData = generateFlightLines(p.points, p.settings);
+  const totalWps = flightData.waypoints.length;
+  const droneSpec = DRONES[p.drone] || DRONES["Mini 4 Pro"];
+  const speed = Number(p.settings.speed || 8);
+  const totalDistM = flightData.lines.reduce((acc, l) => {
+    const dx = (l[1][0] - l[0][0]) * 111320 * Math.cos(l[0][1]*Math.PI/180);
+    const dy = (l[1][1] - l[0][1]) * 110540;
+    return acc + Math.sqrt(dx*dx + dy*dy);
+  }, 0);
+  const flightTimeSec = (totalDistM / speed) + (totalWps * 1.5);
+  const flightTimeMins = flightTimeSec / 60;
+  const effectiveBatteryMins = droneSpec.batteryMins * 0.80;
+  const batteriesNeeded = Math.max(1, Math.ceil(flightTimeMins / effectiveBatteryMins));
+
+  const statWp = document.getElementById('statWpCount');
+  if(statWp) statWp.textContent = totalWps;
+
+  const statTime = document.getElementById('statTime');
+  if(statTime) statTime.textContent = time(flightTimeSec);
+
+  const statBat = document.getElementById('statBat');
+  if(statBat) statBat.innerHTML = `<i class="fa-solid fa-battery-three-quarters"></i> ${batteriesNeeded} un.`;
+
+  renderDetailMap(p, currentDetailViewMode);
+}
+
+function renderDetailMap(p, mode){
+  const el = $('detailMap');
+  if(!el) return;
+  if(dMap){ dMap.remove(); dMap = null; }
+
+  const pPts = (p.points || []).map(x => [x[1], x[0]]);
+  const centerLat = pPts.length ? pPts[0][0] : -12.9714;
+  const centerLng = pPts.length ? pPts[0][1] : -38.5014;
+
+  dMap = L.map('detailMap').setView([centerLat, centerLng], 15);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri'
+  }).addTo(dMap);
+
+  if(pPts.length >= 3){
+    const poly = L.polygon(pPts, {color: '#1769e0', fillColor: '#1769e0', fillOpacity: 0.14, weight: 2.5}).addTo(dMap);
+    const flightData = generateFlightLines(p.points, p.settings || {});
+
+    if(mode === 'waylines'){
+      if(flightData.lines.length > 0){
+        const lineCoords = flightData.lines.map(seg => [[seg[0][1], seg[0][0]], [seg[1][1], seg[1][0]]]);
+        L.polyline(lineCoords, {color: '#22c55e', weight: 3.2, opacity: 0.95}).addTo(dMap);
+      }
+      flightData.waylineEndpoints.forEach(ep => {
+        const epIcon = L.divIcon({
+          className: 'rc-endpoint-marker',
+          html: `<div style="min-width:20px;height:20px;padding:0 4px;border-radius:10px;background:#16a34a;color:#fff;border:2px solid #fff;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,.45)">${ep.index}</div>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        });
+        L.marker([ep.lat, ep.lng], {icon: epIcon})
+          .bindTooltip(`RC WP #${ep.index} • ${ep.role} (${fmt2(ep.alt)}m)`)
+          .addTo(dMap);
+      });
+    } else {
+      if(flightData.waypoints.length > 1){
+        const fullRouteCoords = flightData.waypoints.map(wp => [wp.lat, wp.lng]);
+        L.polyline(fullRouteCoords, {color: '#38bdf8', weight: 2.5, opacity: 0.85, dashArray: '5,5'}).addTo(dMap);
+      }
+      flightData.waypoints.forEach(wp => {
+        const bg = wp.isEndpoint ? '#0d56bf' : '#1769e0';
+        const wpIcon = L.divIcon({
+          className: 'rc-wp-marker',
+          html: `<div style="min-width:18px;height:18px;padding:0 3px;border-radius:9px;background:${bg};color:#fff;border:1.5px solid #fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.4)">${wp.index}</div>`,
+          iconSize: [18, 18],
+          iconAnchor: [9, 9]
+        });
+        L.marker([wp.lat, wp.lng], {icon: wpIcon})
+          .bindTooltip(`WP #${wp.index} • Parada Foto (${fmt2(wp.alt)}m)`)
+          .addTo(dMap);
+      });
+    }
+
+    dMap.fitBounds(poly.getBounds(), {padding: [35, 35]});
+  }
+}
+
+// =========================================================================
+// EXPORTAÇÃO KMZ (WAYLINES + PONTAS & WAYPOINTS)
+// =========================================================================
+function downloadMission(id, exportType){
+  const p = projects.find(x => x.id === id);
+  if(!p) return;
+
+  const s = p.settings || {};
+  const alt = fmt2(p.calc?.a || s.alt || 60);
+  const speed = fmt2(s.speed || 8);
+  const flightData = generateFlightLines(p.points, s);
+
+  const ring = [...(p.points || [])];
+  if(ring.length && (ring[0][0] !== ring[ring.length-1][0] || ring[0][1] !== ring[ring.length-1][1])) ring.push(ring[0]);
+  const polyCoords = ring.map(x => `${x[0]},${x[1]},0`).join(' ');
+
+  let extraKml = '';
+  let fileSuffix = '';
+
+  if(exportType === 'waypoints'){
+    fileSuffix = `_WAYPOINTS_${s.reductionPct || 0}pct`;
+    const routeCoords = flightData.waypoints.map(wp => `${wp.lng.toFixed(7)},${wp.lat.toFixed(7)},${alt}`).join(' ');
+    extraKml = `<Folder><name>Linhas e Waypoints (${flightData.waypoints.length} pontos - ${s.reductionPct || 0}% Redução)</name>
+      <Placemark>
+        <name>Rota Conectada Waypoints</name>
+        <Style><LineStyle><color>fff8bd38</color><width>2</width></LineStyle></Style>
+        <LineString><altitudeMode>relativeToGround</altitudeMode><coordinates>${routeCoords}</coordinates></LineString>
+      </Placemark>` +
+      flightData.waypoints.map(wp => `
+        <Placemark>
+          <name>WP ${wp.index}</name>
+          <description>Altitude: ${alt}m | Velocidade: ${speed}m/s | Ação: Disparo Foto</description>
+          <Point><altitudeMode>relativeToGround</altitudeMode><coordinates>${wp.lng.toFixed(7)},${wp.lat.toFixed(7)},${alt}</coordinates></Point>
+        </Placemark>`).join('') + `</Folder>`;
+  } else {
+    fileSuffix = '_WAYLINES_RC';
+    const allLineCoords = [];
+    flightData.lines.forEach(seg => {
+      allLineCoords.push(`${seg[0][0].toFixed(7)},${seg[0][1].toFixed(7)},${alt}`);
+      allLineCoords.push(`${seg[1][0].toFixed(7)},${seg[1][1].toFixed(7)},${alt}`);
+    });
+    const endpointsKml = flightData.waylineEndpoints.map(ep => `
+      <Placemark>
+        <name>WP ${ep.index}</name>
+        <description>${ep.role} | Altitude: ${alt}m | Velocidade: ${speed}m/s</description>
+        <Point><altitudeMode>relativeToGround</altitudeMode><coordinates>${ep.lng.toFixed(7)},${ep.lat.toFixed(7)},${alt}</coordinates></Point>
+      </Placemark>`).join('');
+
+    extraKml = `<Folder><name>Waylines e Pontas Enumeradas RC</name>
+      <Placemark>
+        <name>Linhas de Voo - DJI ${esc(p.drone)}</name>
+        <description>Altitude: ${alt}m | Velocidade: ${speed}m/s | GSD: ${fmt2(p.calc?.g||s.gsd||0)}cm/px</description>
+        <Style><LineStyle><color>ff5ee622</color><width>3</width></LineStyle></Style>
+        <LineString><altitudeMode>relativeToGround</altitudeMode><coordinates>${allLineCoords.join(' ')}</coordinates></LineString>
+      </Placemark>
+      ${endpointsKml}
+    </Folder>`;
+  }
+
+  const kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>${esc(p.name)} (${exportType.toUpperCase()})</name>
+    <Placemark>
+      <name>Polígono da Missão</name>
+      <Style><PolyStyle><color>33e06917</color></PolyStyle><LineStyle><color>ffe06917</color><width>2</width></LineStyle></Style>
+      <Polygon><outerBoundaryIs><LinearRing><coordinates>${polyCoords}</coordinates></LinearRing></outerBoundaryIs></Polygon>
+    </Placemark>
+    ${extraKml}
+  </Document>
+</kml>`;
+
+  const blob = zipStore([
+    {name: 'doc.kml', data: kmlContent}
+  ]);
+
+  const safeName = (p.name || 'GeoAgreste').replace(/[^a-z0-9_-]/gi, '_');
+  download(blob, `${safeName}${fileSuffix}.kmz`);
+  toast(`Arquivo ${exportType.toUpperCase()} (.KMZ) exportado para o RC!`);
+}
+
+// =========================================================================
+// WIZARD E ESTRUTURA DO PROJETO
+// =========================================================================
+function setFilter(f,b){
+  filter=f;
+  document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  renderDash();
+}
+
+function newProject(){
+  editId=null;
+  draft={
+    name:'', description:'', purpose:'Mapeamento',
+    ownerEmail: String(user.email||'').trim().toLowerCase(),
+    ownerName: user.name,
+    flightRespName: user.name,
+    flightRespContact: user.phone || '',
+    isDateRange: false, periodDate:'', periodDateStart:'', periodDateEnd:'', periodStart:'08:00', periodEnd:'11:00', campaign:'Voo único',
+    flightType:'Fotogrametria', drone:'Mini 4 Pro', points:[], status:'draft',
+    settings:{focal:8.38, sw:6.3, sh:4.725, imgW:4000, gsd:3.00, alt:60.00, front:80, side:70, angle:0, speed:8.00, reductionPct:0},
+    aro:{
+      opName: user.name, opCpf: user.cpf, opSarpas:'SARPAS-GEO-01', opContact: user.phone,
+      respName: user.name, respCpf: user.cpf, respContact: user.phone,
+      obsName:'Observador Comunitário', obsCpf:'000.000.000-00', obsSarpas:'SARPAS-OBS-01', obsContact: user.phone,
+      droneAnac:'PR-000000000', droneAnatel:'12345-20-12345', droneReta:'RETA-2026-GEO', droneSerial:'DJI-SN-998877',
+      locationNotes:'Área urbana / comunidade / terreno declivoso.',
+      segregada:'SIM', capacitada:'SIM'
+    },
+    checks:{}
+  };
+  step=1;
+  openWizard();
+}
+
+function editProject(id){
+  const p=projects.find(x=>x.id===id);
+  if(!p)return;
+  if(!canEditProject(p)) return toast('Você não tem permissão para editar o projeto de outro operador.');
+  editId=id;
+  draft=JSON.parse(JSON.stringify(p));
+  if(draft.settings && draft.settings.reductionPct === undefined) draft.settings.reductionPct = 0;
+  if(!draft.aro) draft.aro = {};
+  if(!draft.flightRespName) draft.flightRespName = draft.aro.respName || draft.ownerName || user.name;
+  if(!draft.flightRespContact) draft.flightRespContact = draft.aro.respContact || user.phone || '';
+  step=1;
+  openWizard();
+}
+
+function openWizard(){
+  $('dashboard').classList.add('hidden');
+  $('projectDetail').classList.add('hidden');
+  $('app').classList.add('hidden');
+  $('wizard').classList.remove('hidden');
+  $('wTitle').textContent=draft.name||'Novo projeto';
+  renderSteps();
+  renderStep();
+}
+
+function renderSteps(){
+  $('steps').innerHTML=STEP.map((x,i)=>`<div class="step ${i+1===step?'active':''} ${i+1<step?'done':''}"><div class="dot"><i class="fa-solid ${x[1]}"></i></div><span>${x[0]}</span></div>`).join('');
+}
+
+function renderStep(){
+  const c=$('wContent');
+  $('back').style.visibility=step===1?'hidden':'visible';
+  $('next').textContent=step===8?'Salvar projeto e ARO':'Continuar →';
+  c.innerHTML=[null,s1,s2,s3,s4,s5,s6,s7,s8][step]();
+  if(step===5)initMap();
+  if(step===6)calc();
+  if(step===8)review();
+}
+
+// ETAPA 1: INFORMAÇÕES + PILOTO / RESPONSÁVEL
+function s1(){
+  return `<div class="card">
+    <h2>Informações do Projeto & Responsável pelo Voo</h2>
+    <p>Defina o nome, finalidade e quem é o piloto responsável pelo voo na comunidade (visível no plano compartilhado, sem exposição de CPF).</p>
+    <div class="field"><label>Nome do projeto</label><input id="n" value="${esc(draft.name)}" placeholder="Ex.: Mapeamento Comunidade Vila Nova"></div>
+    <div class="field"><label>Descrição / Objetivo</label><textarea id="d" placeholder="Descreva os detalhes da comunidade, encostas ou área mapeada...">${esc(draft.description)}</textarea></div>
+    <div class="grid2">
+      <div class="field"><label>Finalidade</label><select id="pur">${['Mapeamento','Fotogrametria','Regularização REURB','Topografia','Inspeção','Agricultura','Modelo 3D'].map(x=>`<option ${draft.purpose===x?'selected':''}>${x}</option>`).join('')}</select></div>
+      <div class="field"><label>Cadastrado por (Conta)</label><input disabled value="${esc(draft.ownerName || user.name)}"></div>
+    </div>
+
+    <div style="margin-top:14px;padding:14px;background:#f8fafc;border:1px solid var(--line);border-radius:10px">
+      <div style="font-size:11px;font-weight:900;color:var(--blue);text-transform:uppercase;margin-bottom:8px">
+        <i class="fa-solid fa-user-check"></i> Piloto / Responsável pelo Voo (Comunitário)
+      </div>
+      <div class="grid2">
+        <div class="field" style="margin-bottom:0"><label>Nome do Piloto Responsável</label><input id="fRespName" value="${esc(draft.flightRespName || user.name)}" placeholder="Nome completo do piloto"></div>
+        <div class="field" style="margin-bottom:0"><label>Telefone / Contato</label><input id="fRespContact" value="${esc(draft.flightRespContact || user.phone || '')}" placeholder="(00) 00000-0000"></div>
+      </div>
+      <div class="hint">Estes dados aparecem para a comunidade na listagem de voos. O CPF é solicitado apenas na ARO regulatória.</div>
+    </div>
+  </div>`;
+}
+
+// ETAPA 2: OPERAÇÃO
+function s2(){
+  return `<div class="card">
+    <h2>Período e Operação</h2>
+    <p>Escolha se a operação será realizada em um <b>único dia</b> ou em um <b>intervalo de dias</b>.</p>
+
+    <div class="field" style="margin-bottom:18px">
+      <label>Modalidade de Data</label>
+      <div style="display:flex;gap:12px;margin-top:6px">
+        <label style="font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
+          <input type="radio" name="dateMode" value="single" ${!draft.isDateRange?'checked':''} onchange="toggleDateMode(false)"> Dia Único
+        </label>
+        <label style="font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
+          <input type="radio" name="dateMode" value="range" ${draft.isDateRange?'checked':''} onchange="toggleDateMode(true)"> Intervalo de Dias
+        </label>
+      </div>
+    </div>
+
+    <div id="singleDateBox" class="${draft.isDateRange?'hidden':''}">
+      <div class="field"><label>Data Prevista do Voo</label><input id="dateSingle" type="date" value="${draft.periodDate||''}"></div>
+    </div>
+
+    <div id="rangeDateBox" class="grid2 ${!draft.isDateRange?'hidden':''}">
+      <div class="field"><label>Data de Início</label><input id="dateStart" type="date" value="${draft.periodDateStart||''}"></div>
+      <div class="field"><label>Data de Término</label><input id="dateEnd" type="date" value="${draft.periodDateEnd||''}"></div>
+    </div>
+
+    <div class="grid2" style="margin-top:12px">
+      <div class="field"><label>Horário de Início</label><input id="start" type="time" value="${draft.periodStart||'08:00'}"></div>
+      <div class="field"><label>Horário de Fim</label><input id="end" type="time" value="${draft.periodEnd||'11:00'}"></div>
+    </div>
+
+    <div class="field"><label>Tipo de Campanha</label><select id="campaign"><option ${draft.campaign==='Voo único'?'selected':''}>Voo único</option><option ${draft.campaign==='Campanha de voos'?'selected':''}>Campanha de voos</option><option ${draft.campaign==='Monitoramento recorrente'?'selected':''}>Monitoramento recorrente</option></select></div>
+  </div>`;
+}
+
+function toggleDateMode(isRange){
+  draft.isDateRange = isRange;
+  $('singleDateBox').classList.toggle('hidden', isRange);
+  $('rangeDateBox').classList.toggle('hidden', !isRange);
+}
+
+// ETAPA 3: TIPO DE VOO
+function s3(){
+  const a=[['Fotogrametria','fa-camera','Ortomosaico e MNT/MDS para comunidade.'],['Mapeamento cadastral','fa-map','Regularização REURB e lotes.'],['Modelo 3D','fa-cube','Reconstrução de encostas e vilas.'],['Inspeção','fa-magnifying-glass','Inspeção de infraestrutura local.'],['Agricultura','fa-seedling','Hortas comunitárias e vegetação.'],['Outro','fa-ellipsis','Outra finalidade.']];
+  return `<div class="card">
+    <h2>Tipo de voo</h2>
+    <p>Selecione a modalidade da missão aérea.</p>
+    <div class="choices">${a.map(x=>`<button class="choice ${draft.flightType===x[0]?'selected':''}" onclick="draft.flightType='${x[0]}';renderStep()"><i class="fa-solid ${x[1]}"></i><strong>${x[0]}</strong><span>${x[2]}</span></button>`).join('')}</div>
+  </div>`;
+}
+
+// ETAPA 4: AERONAVE
+function s4(){
+  return `<div class="card">
+    <h2>Aeronave (Drones de Baixo Custo / Compactos)</h2>
+    <p>Escolha o drone DJI utilizado para aerolevantamento comunitário.</p>
+    <div class="choices">
+      ${Object.keys(DRONES).map(x=>`
+        <button class="choice ${draft.drone===x?'selected':''}" onclick="selectDrone('${x}')">
+          <i class="fa-solid fa-drone"></i>
+          <strong>DJI ${x}</strong>
+          <span>Autonomia nominal: ${DRONES[x].batteryMins} min</span>
+        </button>`).join('')}
+    </div>
+  </div>`;
+}
+
+function selectDrone(n){
+  draft.drone=n;
+  const d=DRONES[n];
+  draft.settings.focal=d.f; draft.settings.sw=d.sw; draft.settings.sh=d.sh; draft.settings.imgW=d.w;
+  renderStep();
+}
+
+// ETAPA 5: ÁREA (MAPA)
+function s5(){
+  return `<div class="card">
+    <h2>Desenho da Área de Voo na Comunidade</h2>
+    <p>Clique no mapa para delimitar o polígono ou importe Shapefile (.zip) / GeoJSON.</p>
+    
+    <div class="mapHeaderActions">
+      <div class="mapSearch">
+        <input id="citySearch" placeholder="Buscar comunidade, bairro ou cidade..." onkeydown="if(event.key==='Enter') searchLocation()">
+        <button class="btn small primary" onclick="searchLocation()"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
+      </div>
+      <div>
+        <input type="file" id="geoFile" accept=".geojson,.json,.zip" class="hidden" onchange="handleGeoUpload(event)">
+        <button class="btn small" onclick="$('geoFile').click()" style="border-color:var(--blue);color:var(--blue)">
+          <i class="fa-solid fa-file-import"></i> Importar Shapefile (.zip) / GeoJSON
+        </button>
+      </div>
+    </div>
+
+    <div class="mapWrap">
+      <div id="map" class="map"></div>
+      <div class="mapTools">
+        <button class="btn small" onclick="toggleMapLayer()"><i class="fa-solid fa-layer-group"></i> <span id="layerLabel">Mapa Ruas</span></button>
+        <button class="btn small" onclick="undo()"><i class="fa-solid fa-rotate-left"></i> Desfazer</button>
+        <button class="btn small" onclick="clearMap()"><i class="fa-solid fa-trash"></i> Limpar</button>
+        <button class="btn small" onclick="center()"><i class="fa-solid fa-crosshairs"></i> Centralizar</button>
+      </div>
+      <div class="mapHintBar">
+        <i class="fa-solid fa-computer-mouse" style="color:var(--blue)"></i> Clique no mapa para desenhar os vértices da área de interesse da comunidade.
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="k">Área</div><div id="area" class="v">0.00 ha</div><div class="s">polígono</div></div>
+      <div class="stat"><div class="k">Vértices</div><div id="verts" class="v">0</div><div class="s">pontos</div></div>
+      <div class="stat"><div class="k">Perímetro</div><div id="perim" class="v">0.00 m</div><div class="s">perímetro total</div></div>
+    </div>
+  </div>`;
+}
+
+function initMap(){
+  setTimeout(()=>{
+    const el=$('map');
+    if(!el)return;
+    if(lMap){ lMap.remove(); lMap=null; }
+
+    let startLat=-12.9714, startLng=-38.5014, startZoom=13;
+    pts=(draft.points||[]).map(x=>({lng:+x[0],lat:+x[1]}));
+    if(pts.length>0){ startLat=pts[0].lat; startLng=pts[0].lng; startZoom=15; }
+
+    lMap = L.map('map').setView([startLat, startLng], startZoom);
+    mapStyle = 'sat';
+    setTileLayer('sat');
+
+    polyLayer = L.polygon([], {color: '#1769e0', fillColor: '#1769e0', fillOpacity: 0.22, weight: 2.5}).addTo(lMap);
+    markersLayer = L.layerGroup().addTo(lMap);
+
+    lMap.on('click', function(e){
+      pts.push({lat: e.latlng.lat, lng: e.latlng.lng});
+      draft.points = pts.map(x=>[x.lng, x.lat]);
+      draw();
+    });
+
+    draw();
+    if(pts.length >= 3) center();
+  }, 50);
+}
+
+function setTileLayer(type){
+  if(!lMap) return;
+  if(currentTileLayer) lMap.removeLayer(currentTileLayer);
+  if(type === 'sat'){
+    currentTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri'
+    }).addTo(lMap);
+    if($('layerLabel')) $('layerLabel').textContent = 'Mapa Ruas';
+  } else {
+    currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(lMap);
+    if($('layerLabel')) $('layerLabel').textContent = 'Satélite';
+  }
+}
+
+function toggleMapLayer(){
+  mapStyle = (mapStyle === 'sat') ? 'osm' : 'sat';
+  setTileLayer(mapStyle);
+}
+
+async function searchLocation(){
+  const q = $('citySearch')?.value?.trim();
+  if(!q) return toast('Digite um local para buscar.');
+  toast('Buscando...');
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`);
+    const data = await res.json();
+    if(data && data.length > 0){
+      lMap.setView([parseFloat(data[0].lat), parseFloat(data[0].lon)], 15);
+      toast('Local encontrado!');
+    } else toast('Local não encontrado.');
+  } catch(err){ toast('Erro ao buscar.'); }
+}
+
+async function handleGeoUpload(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const name = file.name.toLowerCase();
+  try {
+    let geojson = null;
+    if(name.endsWith('.geojson') || name.endsWith('.json')){
+      geojson = JSON.parse(await file.text());
+    } else if(name.endsWith('.zip')){
+      toast('Lendo Shapefile...');
+      geojson = await shp(await file.arrayBuffer());
+    }
+    extractPolygonFromGeoJSON(geojson);
+  } catch(err){ toast('Erro ao ler arquivo.'); }
+  finally { event.target.value = ''; }
+}
+
+function extractPolygonFromGeoJSON(gj){
+  if(!gj) return;
+  let geom = null;
+  if(gj.type === 'FeatureCollection' && gj.features?.length > 0) geom = gj.features[0].geometry;
+  else if(gj.type === 'Feature') geom = gj.geometry;
+  else geom = gj;
+
+  let ring = [];
+  if(geom?.type === 'Polygon') ring = geom.coordinates[0];
+  else if(geom?.type === 'MultiPolygon') ring = geom.coordinates[0][0];
+  else return toast('O arquivo deve conter um Polígono.');
+
+  pts = ring.map(c => ({lng: +c[0], lat: +c[1]}));
+  draft.points = pts.map(x => [x.lng, x.lat]);
+  draw(); center();
+  toast('Polígono importado!');
+}
+
+function draw(){
+  if(!lMap || !polyLayer || !markersLayer) return;
+  markersLayer.clearLayers();
+  polyLayer.setLatLngs(pts.map(p => [p.lat, p.lng]));
+
+  pts.forEach((p, i) => {
+    const icon = L.divIcon({
+      className: 'custom-vertex',
+      html: `<div style="width:18px;height:18px;border-radius:50%;background:#1769e0;color:#fff;border:2px solid #fff;font-size:10px;font-weight:bold;display:grid;place-items:center;">${i+1}</div>`,
+      iconSize: [18, 18], iconAnchor: [9, 9]
+    });
+    const marker = L.marker([p.lat, p.lng], {icon: icon, draggable: true}).addTo(markersLayer);
+    marker.on('drag', function(e){
+      const pos = e.target.getLatLng();
+      pts[i] = {lat: pos.lat, lng: pos.lng};
+      polyLayer.setLatLngs(pts.map(pt => [pt.lat, pt.lng]));
+      updateStats();
+    });
+    marker.on('dragend', function(){ draft.points = pts.map(x => [x.lng, x.lat]); updateStats(); });
+  });
+
+  updateStats();
+}
+
+function updateStats(){
+  let a=0, p=0;
+  if(pts.length>=3){ a=polygonAreaHa(pts); p=polyPerimeterM(pts); draft.areaHa=a; } else draft.areaHa=0;
+  if($('area')) $('area').textContent=fmt2(a)+' ha';
+  if($('verts')) $('verts').textContent=pts.length;
+  if($('perim')) $('perim').textContent=fmt2(p)+' m';
+}
+
+function hav(a,b){
+  const R=6371000, la1=a.lat*Math.PI/180, la2=b.lat*Math.PI/180, dla=(b.lat-a.lat)*Math.PI/180, dlo=(b.lng-a.lng)*Math.PI/180;
+  return 2*R*Math.asin(Math.sqrt(Math.sin(dla/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dlo/2)**2));
+}
+function polygonAreaHa(ps){
+  if(ps.length<3)return 0;
+  const lat0=ps.reduce((a,p)=>a+p.lat,0)/ps.length, kx=111320*Math.cos(lat0*Math.PI/180), ky=110540;
+  let area=0;
+  for(let i=0;i<ps.length;i++){
+    const a=ps[i], b=ps[(i+1)%ps.length], x1=a.lng*kx, y1=a.lat*ky, x2=b.lng*kx, y2=b.lat*ky;
+    area+=x1*y2-x2*y1;
+  }
+  return Math.abs(area/2)/10000;
+}
+function polyPerimeterM(ps){
+  let d=0;
+  for(let i=0;i<ps.length;i++) d+=hav(ps[i],ps[(i+1)%ps.length]);
+  return d;
+}
+function undo(){ pts.pop(); draft.points=pts.map(x=>[x.lng,x.lat]); draw(); }
+function clearMap(){ pts=[]; draft.points=[]; draw(); }
+function center(){ if(lMap&&pts.length) lMap.fitBounds(L.latLngBounds(pts.map(p=>[p.lat,p.lng])),{padding:[40,40]}); }
+
+// ETAPA 6: PARÂMETROS COM ALTITUDE (LIMITE 120M) E 2 CASAS DECIMAIS
+function s6(){
+  const s=draft.settings;
+  const curAlt = Math.min(200, Math.max(10, Number(s.alt || 60)));
+  const isOver120 = curAlt > 120;
+
+  return `<div class="paramGrid">
+    <div class="card">
+      <h2>Parâmetros de Voo & Linhas</h2>
+      <p>Configurações com precisão de <b>2 casas decimais</b>. O limite padrão de altitude de <b>120.00 m</b> está sinalizado na barra.</p>
+      
+      <div class="toggle">
+        <button class="btn ${mode==='gsd'?'active':''}" onclick="mode='gsd';renderStep()">Definir por GSD</button>
+        <button class="btn ${mode==='alt'?'active':''}" onclick="mode='alt';renderStep()">Definir por Altitude</button>
+      </div>
+
+      ${mode==='gsd'?`
+        <div class="field">
+          <label>GSD desejado <span id="gv" style="color:var(--blue)">${fmt2(s.gsd)} cm/px</span></label>
+          <input id="gsd" class="range" type="range" min="0.50" max="10.00" step="0.05" value="${fmt2(s.gsd)}" oninput="draft.settings.gsd=+this.value;calc()">
+        </div>
+      `:`
+        <div class="field">
+          <label>
+            <span>Altitude relativa (metros)</span>
+            <span id="av" style="color:${isOver120 ? '#dc2626' : 'var(--blue)'};font-weight:950">${fmt2(curAlt)} m ${isOver120 ? '(ACIMA DE 120.00m)' : ''}</span>
+          </label>
+          <div class="altSliderWrap">
+            <div class="altTrackWrap">
+              <div class="altLimitTag">Limite 120.00m</div>
+              <div class="altLimitLine"></div>
+              <input id="alt" class="altRange ${isOver120 ? 'overLimit' : ''}" type="range" min="10" max="200" step="0.50" value="${fmt2(curAlt)}" oninput="draft.settings.alt=+this.value;calc()">
+            </div>
+          </div>
+          <div id="altWarnBox" class="altWarnBanner ${isOver120 ? '' : 'hidden'}">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>Atenção: Altitude acima do limite padrão de 120.00 m (400 pés). Exige autorização específica no SARPAS.</span>
+          </div>
+        </div>
+      `}
+
+      <div class="grid2" style="margin-top:14px">
+        <div class="field"><label>Sobreposição frontal <span id="fv">${fmt2(s.front)}%</span></label><input id="front" class="range" type="range" min="50" max="95" step="1" value="${s.front}" oninput="draft.settings.front=+this.value;calc()"></div>
+        <div class="field"><label>Sobreposição lateral <span id="sv">${fmt2(s.side)}%</span></label><input id="side" class="range" type="range" min="40" max="90" step="1" value="${s.side}" oninput="draft.settings.side=+this.value;calc()"></div>
+      </div>
+
+      <div class="grid2">
+        <div class="field"><label>Rotacionar linhas <span id="angv">${fmt2(s.angle)}°</span></label><input id="angle" class="range" type="range" min="0" max="180" step="1" value="${s.angle}" oninput="draft.settings.angle=+this.value;calc()"></div>
+        <div class="field"><label>Velocidade <span id="spv">${fmt2(s.speed)} m/s</span></label><input id="speed" class="range" type="range" min="2" max="15" step="0.10" value="${fmt2(s.speed)}" oninput="draft.settings.speed=+this.value;calc()"></div>
+      </div>
+
+      <div class="field" style="margin-top:14px;background:#f8fafc;padding:12px;border:1px solid var(--line);border-radius:10px">
+        <label style="color:var(--blue);font-weight:950">Redução de Waypoints (%) <span id="redpctv">${fmt2(s.reductionPct || 0)}%</span></label>
+        <input id="reductionPct" class="range" type="range" min="0" max="80" step="5" value="${s.reductionPct || 0}" oninput="draft.settings.reductionPct=+this.value;calc()">
+        <div class="hint">Otimiza o número de pontos de parada intermediários nas linhas de voo.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:10px;font-weight:950;color:var(--muted);text-transform:uppercase">SIMULAÇÃO DO VOO</div>
+      <div class="stats" style="grid-template-columns:1fr;gap:8px;margin-top:10px">
+        <div class="stat"><div class="k">GSD</div><div id="cg" class="v">—</div><div class="s">cm/px</div></div>
+        <div class="stat" id="statCardAlt"><div class="k">Altitude</div><div id="ca" class="v">—</div><div class="s">metros (limite 120.00 m)</div></div>
+        <div class="stat"><div class="k">Waypoints (Fotos)</div><div id="cp" class="v">0</div><div class="s">pontos nas linhas</div></div>
+        <div class="stat"><div class="k">Tempo Estimado</div><div id="ct" class="v">00:00:00</div><div class="s">duração total</div></div>
+        <div class="stat" style="border-color:#b9d0f5;background:#f2f7ff"><div class="k">Baterias (DJI ${esc(draft.drone)})</div><div id="cbat" class="v" style="color:var(--green)">—</div><div class="s">reserva 20% RTH</div></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function calc(){
+  const s=draft.settings;
+  const droneSpec = DRONES[draft.drone] || DRONES["Mini 4 Pro"];
+  let g, a;
+  if(mode==='gsd'){
+    g=Number(s.gsd);
+    a=g*s.focal*s.imgW/(s.sw*100);
+    s.alt=Number(a.toFixed(2));
+  } else {
+    a=Number(s.alt);
+    g=s.sw*a*100/(s.focal*s.imgW);
+    s.gsd=Number(g.toFixed(2));
+  }
+  
+  const isOver120 = a > 120;
+
+  let flightData = {lines: [], waylineEndpoints: [], waypoints: [], rawCount: 0};
+  if(pts.length>=3) flightData = generateFlightLines(pts.map(p => [p.lng, p.lat]), s);
+  
+  const totalWps = flightData.waypoints.length;
+  const totalDistM = flightData.lines.reduce((acc, l) => {
+    const dx = (l[1][0] - l[0][0]) * 111320 * Math.cos(l[0][1]*Math.PI/180);
+    const dy = (l[1][1] - l[0][1]) * 110540;
+    return acc + Math.sqrt(dx*dx + dy*dy);
+  }, 0);
+
+  const flightTimeSec = (totalDistM / (s.speed || 8)) + (totalWps * 1.5);
+  const flightTimeMins = flightTimeSec / 60;
+  const effectiveBatteryMins = droneSpec.batteryMins * 0.80;
+  const batteriesNeeded = Math.max(1, Math.ceil(flightTimeMins / effectiveBatteryMins));
+
+  draft.calc={
+    g: Number(g.toFixed(2)),
+    a: Number(a.toFixed(2)),
+    lines: flightData.lines.length,
+    dist: Number(totalDistM.toFixed(2)),
+    photos: totalWps,
+    time: flightTimeSec,
+    batteries: batteriesNeeded
+  };
+  
+  const set=(id,x)=>{if($(id))$(id).textContent=x;};
+  set('cg',fmt2(g));
+  set('ca',fmt2(a)+' m');
+  if($('ca')) $('ca').style.color = isOver120 ? '#dc2626' : 'var(--blue)';
+  if($('statCardAlt')){
+    $('statCardAlt').style.borderColor = isOver120 ? '#fca5a5' : 'var(--line)';
+    $('statCardAlt').style.background = isOver120 ? '#fef2f2' : '#fff';
+  }
+
+  set('cp', totalWps);
+  set('ct',time(flightTimeSec));
+  set('cbat',`${batteriesNeeded} un. (${fmt2(flightTimeMins)} min)`);
+  set('gv',fmt2(g)+' cm/px');
+
+  if($('av')){
+    $('av').textContent = fmt2(a)+' m' + (isOver120 ? ' (ACIMA DE 120.00m)' : '');
+    $('av').style.color = isOver120 ? '#dc2626' : 'var(--blue)';
+  }
+  if($('alt')){
+    $('alt').classList.toggle('overLimit', isOver120);
+  }
+  if($('altWarnBox')){
+    $('altWarnBox').classList.toggle('hidden', !isOver120);
+  }
+
+  set('fv',fmt2(s.front)+'%');
+  set('sv',fmt2(s.side)+'%');
+  set('angv',fmt2(s.angle)+'°');
+  set('spv',fmt2(s.speed)+' m/s');
+  set('redpctv',fmt2(s.reductionPct || 0)+'%');
+}
+
+function time(x){
+  x=Math.round(x||0);
+  return `${String(Math.floor(x/3600)).padStart(2,'0')}:${String(Math.floor(x%3600/60)).padStart(2,'0')}:${String(x%60).padStart(2,'0')}`;
+}
+
+// =========================================================================
+// ETAPA 7: AVALIAÇÃO DE RISCO OPERACIONAL (ARO) ANAC
+// =========================================================================
+function s7(){
+  const aro = draft.aro || {};
+  return `<div class="card">
+    <div class="aroHeader">
+      <h3><i class="fa-solid fa-shield-halved"></i> AVALIAÇÃO DE RISCO OPERACIONAL – OPERAÇÕES COM RPA</h3>
+      <p>Base normativa: RBAC-E nº 94 | IS E94-003 – ANAC | Documento Individual Restrito</p>
+    </div>
+
+    <p style="font-size:11px;color:var(--muted)">Preencha os dados regulatórios (CPF e registros ANAC/ANATEL). Apenas você e o Administrador têm acesso a esta seção.</p>
+
+    <div class="aroSectionTitle"><i class="fa-solid fa-building"></i> 1. DADOS DO OPERADOR (ASSOCIAÇÃO / RESPONSÁVEL)</div>
+    <div class="grid2">
+      <div class="field"><label>Nome Operador / Associação</label><input id="aroOpName" value="${esc(aro.opName || user.name)}"></div>
+      <div class="field"><label>CNPJ / CPF (Restrito ARO)</label><input id="aroOpCpf" value="${esc(aro.opCpf || user.cpf)}"></div>
+      <div class="field"><label>ID SARPAS Operador</label><input id="aroOpSarpas" value="${esc(aro.opSarpas || 'SARPAS-GEO-01')}"></div>
+      <div class="field"><label>Contato / Telefone</label><input id="aroOpContact" value="${esc(aro.opContact || user.phone)}"></div>
+    </div>
+
+    <div class="aroSectionTitle"><i class="fa-solid fa-user-gear"></i> 2. DADOS DO PILOTO EM COMANDO</div>
+    <div class="grid2">
+      <div class="field"><label>Nome Completo do Piloto</label><input id="aroRespName" value="${esc(aro.respName || draft.flightRespName || user.name)}"></div>
+      <div class="field"><label>CPF (Restrito ARO)</label><input id="aroRespCpf" value="${esc(aro.respCpf || user.cpf)}"></div>
+      <div class="field" style="grid-column:1/-1"><label>Contato de Emergência</label><input id="aroRespContact" value="${esc(aro.respContact || draft.flightRespContact || user.phone)}"></div>
+    </div>
+
+    <div class="aroSectionTitle"><i class="fa-solid fa-eye"></i> 3. DADOS DO OBSERVADOR DE CAMPO</div>
+    <div class="grid2">
+      <div class="field"><label>Nome do Observador</label><input id="aroObsName" value="${esc(aro.obsName || 'Observador Técnico')}"></div>
+      <div class="field"><label>CPF (Restrito ARO)</label><input id="aroObsCpf" value="${esc(aro.obsCpf || '000.000.000-00')}"></div>
+      <div class="field"><label>ID SARPAS Observador</label><input id="aroObsSarpas" value="${esc(aro.obsSarpas || 'SARPAS-OBS-01')}"></div>
+      <div class="field"><label>Contato</label><input id="aroObsContact" value="${esc(aro.obsContact || user.phone)}"></div>
+    </div>
+
+    <div class="aroSectionTitle"><i class="fa-solid fa-drone"></i> 4. DADOS DA AERONAVE (RPA)</div>
+    <div class="grid3">
+      <div class="field"><label>Cadastro ANAC (SISANT)</label><input id="aroDroneAnac" value="${esc(aro.droneAnac || 'PR-000000000')}"></div>
+      <div class="field"><label>Homologação ANATEL</label><input id="aroDroneAnatel" value="${esc(aro.droneAnatel || '12345-20-12345')}"></div>
+      <div class="field"><label>Certificado Seguro RETA</label><input id="aroDroneReta" value="${esc(aro.droneReta || 'RETA-2026-GEO')}"></div>
+      <div class="field"><label>Nº de Série (Serial)</label><input id="aroDroneSerial" value="${esc(aro.droneSerial || 'DJI-SN-998877')}"></div>
+      <div class="field"><label>Modelo</label><input disabled value="DJI ${esc(draft.drone)}"></div>
+      <div class="field"><label>Fabricante</label><input disabled value="DJI Innovations"></div>
+    </div>
+
+    <div class="aroSectionTitle"><i class="fa-solid fa-list-check"></i> 5. ASPECTOS GERAIS E SEGREGAÇÃO</div>
+    <div class="grid2">
+      <div class="field">
+        <label>Operação em área segregada (sem terceiros num raio de 30m)?</label>
+        <select id="aroSegregada">
+          <option ${aro.segregada==='SIM'?'selected':''}>SIM</option>
+          <option ${aro.segregada==='NÃO'?'selected':''}>NÃO</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Equipe com treinamento adequado para voos em comunidades?</label>
+        <select id="aroCapacitada">
+          <option ${aro.capacitada==='SIM'?'selected':''}>SIM</option>
+          <option ${aro.capacitada==='NÃO'?'selected':''}>NÃO</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Anotações Técnicas e Localização na Comunidade</label>
+      <textarea id="aroLocationNotes" placeholder="Descreva os acessos, presença de encostas, redes elétricas...">${esc(aro.locationNotes || 'Área urbana / comunidade / terreno declivoso.')}</textarea>
+    </div>
+
+    <div class="aroSectionTitle"><i class="fa-solid fa-table-cells"></i> 6. MATRIZ DE RISCO OPERACIONAL ANAC (RBAC-E 94)</div>
+    <table class="aroMatrixTable">
+      <thead>
+        <tr>
+          <th colspan="2" rowspan="2">MATRIZ 5x5 ANAC</th>
+          <th colspan="5">SEVERIDADE DA OCORRÊNCIA</th>
+        </tr>
+        <tr>
+          <th>Catastrófico (A)</th>
+          <th>Crítico (B)</th>
+          <th>Significativo (C)</th>
+          <th>Pequeno (D)</th>
+          <th>Insignificante (E)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th rowspan="5" style="writing-mode:vertical-lr">PROBABILIDADE</th>
+          <th>Frequente (5)</th>
+          <td class="risk-extremo">5A (Extremo)</td>
+          <td class="risk-extremo">5B (Extremo)</td>
+          <td class="risk-alto">5C (Alto)</td>
+          <td class="risk-moderado">5D (Moderado)</td>
+          <td class="risk-moderado">5E (Moderado)</td>
+        </tr>
+        <tr>
+          <th>Ocasional (4)</th>
+          <td class="risk-extremo">4A (Extremo)</td>
+          <td class="risk-alto">4B (Alto)</td>
+          <td class="risk-moderado">4C (Moderado)</td>
+          <td class="risk-moderado">4D (Moderado)</td>
+          <td class="risk-baixo">4E (Baixo)</td>
+        </tr>
+        <tr>
+          <th>Remoto (3)</th>
+          <td class="risk-alto">3A (Alto)</td>
+          <td class="risk-moderado">3B (Moderado)</td>
+          <td class="risk-moderado" style="outline:2px solid var(--blue)">3C (Perda Link)</td>
+          <td class="risk-baixo">3D (Baixo)</td>
+          <td class="risk-baixo">3E (Baixo)</td>
+        </tr>
+        <tr>
+          <th>Improvável (2)</th>
+          <td class="risk-moderado">2A (Moderado)</td>
+          <td class="risk-moderado">2B (Moderado)</td>
+          <td class="risk-baixo">2C (Baixo)</td>
+          <td class="risk-baixo">2D (Baixo)</td>
+          <td class="risk-muitobaixo">2E (Muito Baixo)</td>
+        </tr>
+        <tr>
+          <th>Muito Improvável (1)</th>
+          <td class="risk-moderado" style="outline:2px solid var(--blue)">1A (Tráfego Aéreo)</td>
+          <td class="risk-baixo" style="outline:2px solid var(--blue)">1B (Pessoas)</td>
+          <td class="risk-baixo">1C (Baixo)</td>
+          <td class="risk-muitobaixo">1D (Muito Baixo)</td>
+          <td class="risk-muitobaixo">1E (Muito Baixo)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function captureARO(){
+  if(!$('aroOpName')) return;
+  draft.aro = {
+    opName: $('aroOpName').value.trim(),
+    opCpf: $('aroOpCpf').value.trim(),
+    opSarpas: $('aroOpSarpas').value.trim(),
+    opContact: $('aroOpContact').value.trim(),
+    respName: $('aroRespName').value.trim(),
+    respCpf: $('aroRespCpf').value.trim(),
+    respContact: $('aroRespContact').value.trim(),
+    obsName: $('aroObsName').value.trim(),
+    obsCpf: $('aroObsCpf').value.trim(),
+    obsSarpas: $('aroObsSarpas').value.trim(),
+    obsContact: $('aroObsContact').value.trim(),
+    droneAnac: $('aroDroneAnac').value.trim(),
+    droneAnatel: $('aroDroneAnatel').value.trim(),
+    droneReta: $('aroDroneReta').value.trim(),
+    droneSerial: $('aroDroneSerial').value.trim(),
+    segregada: $('aroSegregada').value,
+    capacitada: $('aroCapacitada').value,
+    locationNotes: $('aroLocationNotes').value.trim()
+  };
+}
+
+// ETAPA 8: REVISÃO COMPLETA
+function s8(){
+  captureARO();
+  return `<div class="card">
+    <h2>Revisão Geral do Planejamento & ARO</h2>
+    <p>Confira as informações consolidadas com 2 casas decimais antes de salvar na plataforma.</p>
+    
+    <div id="review" class="review"></div>
+
+    <div style="margin-top:18px">
+      <div style="font-size:10px;font-weight:950;color:#6b7885;text-transform:uppercase;margin-bottom:6px">Checklist Regulatório Final</div>
+      ${[['sarpas','Verifiquei a aprovação / notificação do voo no SARPAS.'],['sisant','Certificado ANAC / SISANT regularizado e a bordo.'],['anatel','Selo ANATEL da aeronave e do rádio-controle afixados.'],['people','Área de 30m isenta de pessoas não anuentes.'],['aero','Seguro RETA dentro do prazo de validade.']].map(x=>`<label class="check" style="display:flex;gap:8px;font-size:11px;padding:6px 0"><input type="checkbox" ${draft.checks[x[0]]?'checked':''} onchange="draft.checks['${x[0]}']=this.checked">${x[1]}</label>`).join('')}
+    </div>
+
+    <div class="alert">
+      <b>Tudo pronto:</b> Ao salvar, o plano de voo estará disponível na comunidade e sua ARO regulatória poderá ser impressa em PDF.
+    </div>
+  </div>`;
+}
+
+function review(){
+  calc();
+  const s=draft.settings, c=draft.calc||{};
+  const data=[
+    ['Projeto',draft.name],
+    ['Piloto Responsável',draft.flightRespName || draft.ownerName],
+    ['Período / Datas',getPeriodLabel(draft)],
+    ['Horário de Operação',`${draft.periodStart||'08:00'} às ${draft.periodEnd||'11:00'}`],
+    ['Tipo de Voo',draft.flightType],
+    ['Aeronave','DJI '+draft.drone],
+    ['Área Total',fmt2(draft.areaHa||0)+' ha'],
+    ['GSD',fmt2(c.g)+' cm/px'],
+    ['Altitude de Voo',fmt2(c.a)+' metros' + (c.a > 120 ? ' (Acima 120.00m)' : '')],
+    ['Rotação de Linhas',fmt2(s.angle)+'°'],
+    ['Redução Waypoints',fmt2(s.reductionPct||0)+'%'],
+    ['Waypoints (Fotos)',c.photos],
+    ['Tempo de Voo',time(c.time)],
+    ['Baterias Estimadas',`${c.batteries} unidade(s)`]
+  ];
+  $('review').innerHTML=data.map(x=>`<div class="reviewItem"><div class="k">${x[0]}</div><div class="v">${esc(x[1])}</div></div>`).join('');
+}
+
+function capture(){
+  if(step===1){
+    draft.name=$('n').value.trim();
+    draft.description=$('d').value.trim();
+    draft.purpose=$('pur').value;
+    draft.flightRespName=$('fRespName').value.trim();
+    draft.flightRespContact=$('fRespContact').value.trim();
+  }
+  if(step===2){
+    if(!draft.isDateRange){
+      draft.periodDate=$('dateSingle').value;
+      draft.period = draft.periodDate ? new Date(draft.periodDate+'T12:00:00').toLocaleDateString('pt-BR') : 'Não definido';
+    } else {
+      draft.periodDateStart=$('dateStart').value;
+      draft.periodDateEnd=$('dateEnd').value;
+    }
+    draft.periodStart=$('start').value; draft.periodEnd=$('end').value; draft.campaign=$('campaign').value;
+  }
+  if(step===7) captureARO();
+}
+
+function next(){
+  capture();
+  if(step===1&&!draft.name)return toast('Informe o nome do projeto.');
+  if(step===5&&pts.length<3)return toast('Desenhe ou importe uma área com pelo menos 3 pontos.');
+  if(step<8){step++;renderSteps();renderStep();}else saveProject();
+}
+
+function prev(){
+  capture();
+  if(step>1){step--;renderSteps();renderStep();}
+}
+
+function cancelWizard(){
+  if(confirm('Cancelar planejamento?'))openDash();
+}
+
+function saveProject(){
+  capture();
+  calc();
+  draft.status='planned';
+  draft.updatedAt=new Date().toISOString();
+  draft.createdAt=draft.createdAt||new Date().toISOString();
+  draft.ownerEmail=draft.ownerEmail || String(user.email||'').trim().toLowerCase();
+  draft.ownerName=draft.ownerName || user.name;
+  draft.id=editId||Date.now().toString(36);
+  draft.points=pts.map(x=>[x.lng,x.lat]);
+
+  if(editId){
+    const i=projects.findIndex(x=>x.id===editId);
+    if(i>=0)projects[i]=draft;
+  }else{
+    projects.unshift(draft);
+  }
+  saveAllProjects();
+  toast('Projeto e ARO salvos com sucesso!');
+  setTimeout(() => {
+    $('wizard').classList.add('hidden');
+    $('app').classList.remove('hidden');
+    viewProject(draft.id);
+  }, 300);
+}
+
+// =========================================================================
+// GERAÇÃO E IMPRESSÃO DO DOCUMENTO ARO (PDF / ACERVO)
+// =========================================================================
+function printARO(id){
+  const p = projects.find(x => x.id === id);
+  if(!p) return;
+  if(!canAccessARO(p)) return toast('Acesso negado: a ARO é restrita ao proprietário do projeto e ao Administrador.');
+
+  const aro = p.aro || {};
+  const s = p.settings || {};
+  const today = new Date().toLocaleDateString('pt-BR');
+
+  const printHTML = `
+    <div style="font-family:Arial, sans-serif; padding:16px; color:#0f172a; line-height:1.4;">
+      <div style="background:linear-gradient(135deg,#0d3b66,#1769e0); color:#ffffff; padding:14px 18px; border-radius:8px; margin-bottom:14px; text-align:center;">
+        <h2 style="margin:0; font-size:15pt; font-weight:bold;">AVALIAÇÃO DE RISCO OPERACIONAL – COMUNIDADES E RPA</h2>
+        <div style="font-size:9.5pt; font-weight:bold; margin-top:4px; opacity:0.95;">Base normativa: RBAC-E n° 94 | IS E94-003 – ANAC</div>
+        <div style="font-size:10pt; margin-top:3px; font-style:italic; opacity:0.9;">GeoAgreste Engenharia Cartográfica</div>
+      </div>
+
+      <div style="margin-bottom:10px; font-size:9.5pt;">
+        <b style="color:#0d3b66;">1. INTRODUÇÃO</b><br>
+        Avaliação de Risco Operacional desenvolvida em conformidade com os requisitos dos parágrafos E94.103(f)(2) e E94.103(g)(2) do RBAC-E n° 94 e IS E94-003 da ANAC para aerolevantamentos em áreas comunitárias.
+      </div>
+
+      <div style="margin-bottom:10px; font-size:9.5pt; background:#f8fafc; border:1px solid #cbd5e1; padding:8px 10px; border-radius:6px;">
+        <b style="color:#0d3b66;">2. LOCALIZAÇÃO E ANOTAÇÕES DA MISSÃO</b><br>
+        <b>Projeto:</b> ${esc(p.name)} | <b>Área:</b> ${fmt2(p.areaHa||0)} ha | <b>Período:</b> ${getPeriodLabel(p)}<br>
+        <b>Anotações do Terreno:</b> ${esc(aro.locationNotes || 'Área urbana / comunidade.')}
+      </div>
+
+      <table style="width:100%; border-collapse:collapse; margin-bottom:10px; font-size:9.5pt;" border="1" cellpadding="5">
+        <tr style="background:#1e3a8a; color:#ffffff;"><th colspan="2" style="text-align:left;">3. DADOS DO OPERADOR E PILOTO</th></tr>
+        <tr><td style="background:#f8fafc;"><b>OPERADOR / ASSOCIAÇÃO:</b> ${esc(aro.opName||p.ownerName)}</td><td><b>CPF/CNPJ:</b> ${esc(aro.opCpf||'—')} | <b>SARPAS:</b> ${esc(aro.opSarpas||'—')}</td></tr>
+        <tr><td style="background:#f8fafc;"><b>PILOTO EM COMANDO:</b> ${esc(aro.respName||p.flightRespName||p.ownerName)}</td><td><b>CPF:</b> ${esc(aro.respCpf||'—')} | <b>Contato:</b> ${esc(aro.respContact||'—')}</td></tr>
+      </table>
+
+      <table style="width:100%; border-collapse:collapse; margin-bottom:10px; font-size:9.5pt;" border="1" cellpadding="5">
+        <tr style="background:#1e3a8a; color:#ffffff;"><th colspan="2" style="text-align:left;">4. DADOS DA AERONAVE (RPA)</th></tr>
+        <tr><td style="background:#f8fafc;"><b>MODELO:</b> DJI ${esc(p.drone)}</td><td><b>SERIAL:</b> ${esc(aro.droneSerial||'—')}</td></tr>
+        <tr><td style="background:#f8fafc;"><b>CADASTRO ANAC (SISANT):</b> ${esc(aro.droneAnac||'—')}</td><td><b>ANATEL:</b> ${esc(aro.droneAnatel||'—')}</td></tr>
+      </table>
+
+      <div style="margin-top:18px; font-size:9.5pt;">
+        Declaro que os operadores e pilotos envolvidos possuem conhecimento das regulamentações aplicáveis da ANAC.<br><br>
+        <b>Validade desta ARO:</b> ${today} até 6 meses após a emissão.<br><br>
+        <b>Local e Data:</b> __________________________, ${today}<br><br><br>
+        <div style="text-align:center; margin-top:16px;">
+          __________________________________________________________<br>
+          <b>${esc(aro.respName||p.flightRespName||p.ownerName)}</b><br>
+          Responsável pela Avaliação de Risco Operacional (ARO)<br>
+          CPF: ${esc(aro.respCpf||'—')}
+        </div>
+      </div>
+    </div>
+  `;
+
+  const container = $('aroPrintContainer');
+  container.innerHTML = printHTML;
+  container.classList.remove('hidden');
+  window.print();
+  setTimeout(() => container.classList.add('hidden'), 1000);
+}
+
+// UTILITÁRIOS ZIP E ARQUIVOS
+function crc32(bytes){
+  let c=0xffffffff;
+  for(let i=0;i<bytes.length;i++){
+    c^=bytes[i];
+    for(let k=0;k<8;k++) c=(c>>>1)^((c&1)?0xedb88320:0);
+  }
+  return (c^0xffffffff)>>>0;
+}
+function u16(n){return new Uint8Array([n&255,(n>>>8)&255]);}
+function u32(n){return new Uint8Array([n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]);}
+function cat(...parts){
+  let n=parts.reduce((a,b)=>a+b.length,0), o=new Uint8Array(n), p=0;
+  for(const b of parts){o.set(b,p);p+=b.length;}
+  return o;
+}
+function zipStore(files){
+  const enc=new TextEncoder(), locals=[], centrals=[];
+  let off=0;
+  for(const f of files){
+    const name=enc.encode(f.name), data=typeof f.data==='string'?enc.encode(f.data):f.data, crc=crc32(data);
+    const local=cat(new Uint8Array([80,75,3,4]),u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),name,data);
+    locals.push(local);
+    const central=cat(new Uint8Array([80,75,1,2]),u16(20),u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(off),name);
+    centrals.push(central);
+    off+=local.length;
+  }
+  const body=cat(...locals), cd=cat(...centrals), endrec=cat(new Uint8Array([80,75,5,6]),u16(0),u16(0),u16(files.length),u16(files.length),u32(cd.length),u32(body.length),u16(0));
+  return new Blob([body,cd,endrec],{type:'application/vnd.google-earth.kmz'});
+}
+function download(b,n){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(b);
+  a.download=n;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function delProject(id, goDash=false){
+  const p = projects.find(x=>x.id===id);
+  if(!p || !canEditProject(p)) return toast('Você não tem permissão para excluir este projeto.');
+  if(confirm('Excluir este projeto?')){
+    projects=projects.filter(x=>x.id!==id);
+    saveAllProjects();
+    if(goDash) openDash(); else renderDash();
+    toast('Projeto excluído.');
+  }
+}
+
+boot();
+</script>
+
+
+</body>
+</html>
