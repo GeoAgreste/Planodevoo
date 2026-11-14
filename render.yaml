@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: geoagreste-dronetm
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --workers 2 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT app:app
+    plan: starter
+    envVars:
+      - key: CORS_ORIGINS
+        value: '*'
+      - key: COOKIE_SECURE
+        value: 'true'
+      - key: SECRET_KEY
+        generateValue: true
