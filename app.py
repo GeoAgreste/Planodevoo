@@ -13,6 +13,17 @@ app.config.update(
     SECRET_KEY=os.environ.get('SECRET_KEY') or os.urandom(32).hex(),
     SQLALCHEMY_DATABASE_URI=(os.environ.get('DATABASE_URL', '').replace('postgres://', 'postgresql://', 1)),
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
+    # Evita reutilizar conexões PostgreSQL que tenham sido encerradas ou
+    # ficado inválidas enquanto a aplicação estava ociosa (Render).
+    SQLALCHEMY_ENGINE_OPTIONS={
+        'pool_pre_ping': True,
+        'pool_recycle': 180,
+        'pool_timeout': 30,
+        'pool_size': 3,
+        'max_overflow': 2,
+        'pool_reset_on_return': 'rollback',
+        'connect_args': {'connect_timeout': 10, 'sslmode': 'require'},
+    },
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
     SESSION_COOKIE_SECURE=os.environ.get('COOKIE_SECURE', 'true').lower() == 'true',
