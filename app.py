@@ -2,10 +2,12 @@
 import os, json
 from datetime import datetime, timezone
 from functools import wraps
-from flask import Flask, jsonify, request, send_from_directory, session
+from flask import Flask, jsonify, request, send_from_directory, session, redirect
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from authlib.integrations.flask_client import OAuth
 from werkzeug.security import generate_password_hash, check_password_hash
+import secrets
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__, static_folder=None)
@@ -36,6 +38,21 @@ cors_origins = [x.strip() for x in os.environ.get('CORS_ORIGINS', '*').split(','
 if cors_origins and cors_origins != ['*']:
     CORS(app, supports_credentials=True, resources={r'/api/*': {'origins': cors_origins}})
 db = SQLAlchemy(app)
+
+# Login Google (OpenID Connect). As credenciais ficam somente nas variáveis
+# de ambiente do Render, nunca no código-fonte.
+oauth = OAuth(app)
+google_client_id = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
+google_client_secret = os.environ.get('GOOGLE_CLIENT_SECRET', '').strip()
+google = None
+if google_client_id and google_client_secret:
+    google = oauth.register(
+        name='google',
+        client_id=google_client_id,
+        client_secret=google_client_secret,
+        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+        client_kwargs={'scope': 'openid email profile'},
+    )
 
 
 def now_iso():
@@ -116,6 +133,63 @@ def health():
     except Exception:
         app.logger.exception('Falha ao verificar PostgreSQL')
         return jsonify(status='error', database='disconnected'), 503
+
+@app.get('/auth/google')
+def google_login():
+    if google is None:
+        return redirect('/?google_error=not_configured')
+    redirect_uri = os.environ.get('GOOGLE_REDIRECT_URI', '').strip()
+    if not redirect_uri:
+        app.logger.error('GOOGLE_REDIRECT_URI não configurada no servidor.')
+        return redirect('/?google_error=not_configured')
+    return google.authorize_redirect(redirect_uri)
+
+
+@app.get('/auth/google/callback')
+def google_callback():
+    if google is None:
+        return redirect('/?google_error=not_configured')
+    if request.args.get('error'):
+        return redirect('/?google_error=access_denied')
+    try:
+        token = google.authorize_access_token()
+        info = token.get('userinfo') or {}
+        email = str(info.get('email', '')).strip().lower()
+        name = str(info.get('name') or info.get('given_name') or email.split('@')[0]).strip()
+        email_verified = info.get('email_verified') is True or str(info.get('email_verified', '')).lower() == 'true'
+        if not email or not email_verified:
+            app.logger.warning('Login Google recusado: e-mail ausente ou não verificado.')
+            return redirect('/?google_error=email_unverified')
+
+        # Vincula uma conta existente somente quando o Google confirma que
+        # o usuário controla aquele endereço de e-mail.
+        user = User.query.filter_by(email=email).first()
+        if user is None:
+            user = User(
+                name=name[:160],
+                email=email,
+                cpf='',
+                phone='',
+                password_hash=generate_password_hash(secrets.token_urlsafe(48)),
+                role='user',
+            )
+            db.session.add(user)
+            db.session.flush()
+            created = True
+        else:
+            created = False
+
+        session.clear()
+        session['email'] = user.email
+        audit('google_register' if created else 'google_login', 'session', user.id,
+              details={'provider': 'google'})
+        db.session.commit()
+        return redirect('/')
+    except Exception:
+        db.session.rollback()
+        app.logger.exception('Falha no callback de autenticação Google')
+        return redirect('/?google_error=authentication_failed')
+
 
 @app.post('/api/auth/register')
 def register():
