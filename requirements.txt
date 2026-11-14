@@ -1,9 +1,0 @@
-Flask==3.1.1
-Flask-Cors==5.0.1
-gunicorn==23.0.0
-pyodm==1.5.12
-Pillow==11.2.1
-pyproj==3.7.1
-requests==2.32.4
-
-laspy[lazrs]>=2.5.4
